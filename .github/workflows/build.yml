@@ -8,8 +8,8 @@ on:
 
 jobs:
   build:
-    runs-on:
-      labels: ubuntu-22.04-2cpu-8ram-75ssd
+    runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5

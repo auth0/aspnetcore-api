@@ -302,4 +302,4 @@ WWW-Authenticate: DPoP error="invalid_token",
 
 - [RFC 9449: OAuth 2.0 DPoP](https://datatracker.ietf.org/doc/html/rfc9449)
 - [Auth0 DPoP Documentation](https://auth0.com/docs/secure/tokens/token-best-practices/proof-of-possession)
-- [Sample Application](https://github.com/atko-cic/auth0-aspnetcore-api/tree/main/Auth0.AspNetCore.Authentication.Api.Playground)
+- [Sample Application](https://github.com/auth0/aspnetcore-api/tree/main/Auth0.AspNetCore.Authentication.Api.Playground)

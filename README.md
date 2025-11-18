@@ -1,6 +1,6 @@
 ![Auth0 API SDK for securing your .NET API Server using tokens from Auth0](https://cdn.auth0.com/website/sdks/banners/auth0-dotnet-api-banner.png)
 
-[![Build and Test](https://github.com/atko-cic/auth0-aspnetcore-api/actions/workflows/build.yml/badge.svg)](https://github.com/atko-cic/auth0-aspnetcore-api/actions/workflows/build.yml)
+[![Build and Test](https://github.com/auth0/aspnetcore-api/actions/workflows/build.yml/badge.svg)](https://github.com/auth0/aspnetcore-api/actions/workflows/build.yml)
 [![License](https://img.shields.io/:license-Apache%202.0-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 
 A library that provides **everything the standard JWT Bearer authentication offers**, with the added power of **built-in DPoP (Demonstration of Proof-of-Possession)** support for enhanced token security. Simplify your Auth0 JWT authentication integration for ASP.NET Core APIs with Auth0-specific configuration and validation.
@@ -313,8 +313,8 @@ For comprehensive, copy-pastable code examples covering various scenarios, see *
 Clone the repository and build the solution:
 
 ```bash
-git clone https://github.com/auth0/auth0-aspnetcore-api.git
-cd auth0-aspnetcore-api
+git clone https://github.com/auth0/aspnetcore-api.git
+cd aspnetcore-api
 dotnet restore Auth0.AspNetCore.Authentication.Api.sln
 dotnet build Auth0.AspNetCore.Authentication.Api.sln --configuration Release
 ```
@@ -385,7 +385,7 @@ If you have questions or need help:
 - 📖 Check the [Auth0 Documentation](https://auth0.com/docs)
 - � See [EXAMPLES.md](./EXAMPLES.md) for code examples
 - 💬 Visit the [Auth0 Community](https://community.auth0.com/)
-- 🐛 Report issues on [GitHub Issues](https://github.com/auth0/auth0-aspnetcore-api/issues)
+- 🐛 Report issues on [GitHub Issues](https://github.com/auth0/aspnetcore-api/issues)
 
 ## License
 Copyright 2025 Okta, Inc.

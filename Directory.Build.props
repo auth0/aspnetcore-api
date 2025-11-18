@@ -12,8 +12,8 @@
     <Company>Auth0, Inc.</Company>
     <Copyright>Copyright (c) 2016-2025 Auth0, Inc.</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/auth0/auth0-aspnetcore-api</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/auth0/auth0-aspnetcore-api</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/auth0/aspnetcore-api</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/auth0/aspnetcore-api</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
