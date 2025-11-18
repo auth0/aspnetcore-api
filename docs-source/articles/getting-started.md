@@ -156,4 +156,4 @@ curl --request GET \
 
 ### Need Help?
 
-If you're experiencing issues not covered here, please [open an issue on GitHub](https://github.com/auth0/auth0-aspnetcore-api/issues) and we'll be happy to help!
+If you're experiencing issues not covered here, please [open an issue on GitHub](https://github.com/auth0/aspnetcore-api/issues) and we'll be happy to help!

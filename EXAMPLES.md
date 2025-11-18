@@ -1135,4 +1135,4 @@ If you have questions or need help with these examples:
 
 - 📖 Check the [main README](README.md) for overview and setup instructions
 - 💬 Visit the [Auth0 Community](https://community.auth0.com/)
-- 🐛 Report issues on [GitHub Issues](https://github.com/auth0/auth0-aspnetcore-api/issues)
+- 🐛 Report issues on [GitHub Issues](https://github.com/auth0/aspnetcore-api/issues)

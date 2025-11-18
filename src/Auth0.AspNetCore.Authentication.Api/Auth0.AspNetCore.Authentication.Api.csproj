@@ -23,7 +23,7 @@
 
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>logo.png</PackageIcon>
-    <PackageReleaseNotes>See https://github.com/auth0/auth0-aspnetcore-api/releases for release notes.</PackageReleaseNotes>
+    <PackageReleaseNotes>See https://github.com/auth0/aspnetcore-api/releases for release notes.</PackageReleaseNotes>
     <DocumentationFile>$(OutputPath)$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
 

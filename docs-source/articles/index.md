@@ -35,7 +35,7 @@ This library simplifies the integration of Auth0 JWT authentication into your AS
 
 ## Resources
 
-- [GitHub Repository](https://github.com/atko-cic/auth0-aspnetcore-api)
+- [GitHub Repository](https://github.com/auth0/aspnetcore-api)
 - [Auth0 Documentation](https://auth0.com/docs)
 - [ASP.NET Core Documentation](https://docs.microsoft.com/aspnet/core)
 

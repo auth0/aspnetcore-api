@@ -1734,8 +1734,8 @@ If you encounter issues not covered in this guide:
 ### 🐛 GitHub Issues
 We're here to help! If you run into any problems during migration:
 
-1. **Check existing issues:** [Search for similar problems](https://github.com/atko-cic/auth0-aspnetcore-api/issues)
-2. **Create a new issue:** [Report your issue](https://github.com/atko-cic/auth0-aspnetcore-api/issues/new)
+1. **Check existing issues:** [Search for similar problems](https://github.com/auth0/aspnetcore-api/issues)
+2. **Create a new issue:** [Report your issue](https://github.com/auth0/aspnetcore-api/issues/new)
 
 When reporting an issue, please include:
 - Your current JWT Bearer configuration (sanitized)

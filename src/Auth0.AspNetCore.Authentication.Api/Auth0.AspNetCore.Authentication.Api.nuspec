@@ -12,15 +12,15 @@
     <license type="expression">Apache-2.0</license>
     <copyright>$copyright$</copyright>
 
-    <projectUrl>https://github.com/auth0/auth0-aspnetcore-api</projectUrl>
-    <repository type="git" url="https://github.com/auth0/auth0-aspnetcore-api" branch="main" commit="$commit$" />
+    <projectUrl>https://github.com/auth0/aspnetcore-api</projectUrl>
+    <repository type="git" url="https://github.com/auth0/aspnetcore-api" branch="main" commit="$commit$" />
 
     <icon>logo.png</icon>
     <readme>README.md</readme>
 
     <description>$description$</description>
     <summary>Auth0 JWT authentication for ASP.NET Core APIs with built-in DPoP (Demonstration of Proof-of-Possession) support for enhanced token security.</summary>
-    <releaseNotes>See https://github.com/auth0/auth0-aspnetcore-api/blob/main/CHANGELOG.md for detailed release notes.</releaseNotes>
+    <releaseNotes>See https://github.com/auth0/aspnetcore-api/blob/main/CHANGELOG.md for detailed release notes.</releaseNotes>
 
     <tags>$tags$</tags>
 

@@ -17,7 +17,7 @@ public abstract class Utils
     {
         Version? sdkVersion = typeof(AuthenticationBuilderExtensions).GetTypeInfo().Assembly.GetName().Version;
         var agentJson =
-            $"{{\"name\":\"auth0-aspnetcore-api\",\"version\":\"{BuildVersionString(sdkVersion)}\"}}";
+            $"{{\"name\":\"aspnetcore-api\",\"version\":\"{BuildVersionString(sdkVersion)}\"}}";
         return Convert.ToBase64String(Encoding.UTF8.GetBytes(agentJson));
     }
 
