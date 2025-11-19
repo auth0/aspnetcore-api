@@ -1,0 +1,37 @@
+<Project>
+  <PropertyGroup>
+    <Product>Auth0.AspNetCore.Authentication.Api</Product>
+    <Description>Auth0 API SDK for securing your .NET API Server using tokens from Auth0</Description>
+    <Copyright>Copyright 2025 Okta, Inc.</Copyright>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <Authors>Auth0</Authors>
+    <PackageTags>auth0;authentication;oidc;oauth2;aspnetcore</PackageTags>
+    <PackageIconUrl>https://secure.gravatar.com/avatar/805765c256ff8617fcad483b5476faf2</PackageIconUrl>
+    <PackageIcon>Auth0Icon.png</PackageIcon>
+    <PackageProjectUrl>https://github.com/auth0/aspnetcore-api</PackageProjectUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/auth0/aspnetcore-api</RepositoryUrl>
+    <PackageReleaseNotes>
+      https://github.com/auth0/aspnetcore-api/blob/master/CHANGELOG.md
+    </PackageReleaseNotes>
+    <CLSCompliant>true</CLSCompliant>
+    <ComVisible>false</ComVisible>
+  </PropertyGroup>
+    <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Version>1.0.0-beta.0</Version>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyVersion>$(Version)</AssemblyVersion>
+    <AssemblyFileVersion>$(Version)</AssemblyFileVersion>
+    <InformationalVersion>$(Version)</InformationalVersion>
+    <PackageVersion>$(Version)</PackageVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="../../build/Auth0Icon.png" Pack="true" Visible="false" PackagePath=""/>
+  </ItemGroup>
+</Project>
