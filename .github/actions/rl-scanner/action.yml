@@ -22,7 +22,7 @@ runs:
         pip install boto3 requests
 
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@e3dd6a0127b5990325885467db925520ab1e5dd4
+      uses: aws-actions/configure-aws-credentials@v1
       with:
         role-to-assume: ${{ env.PRODSEC_TOOLS_ARN }}
         aws-region: us-east-1

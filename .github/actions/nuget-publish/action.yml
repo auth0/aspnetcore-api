@@ -34,5 +34,5 @@ runs:
       shell: pwsh
       run: |
         foreach($file in (Get-ChildItem "${{ inputs.nuget-directory }}" -Recurse -Include *.nupkg)) {
-            echo "dotnet nuget push $file --api-key '${{ inputs.nuget-token }}' --source https://api.nuget.org/v3/index.json --skip-duplicate"
+            dotnet nuget push $file --api-key "${{ inputs.nuget-token }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
         }

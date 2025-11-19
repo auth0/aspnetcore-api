@@ -3,7 +3,10 @@ name: Create NuGet and GitHub Release
 on:
   workflow_call:
     inputs:
-      nuget-directory:
+      dotnet-version:
+        required: true
+        type: string
+      project-paths:
         required: true
         type: string
     secrets:
@@ -23,13 +26,6 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
-      # Download the NuGet package artifact
-      - name: Download NuGet package
-        uses: actions/download-artifact@v4
-        with:
-          name: nuget-package
-          path: ${{ github.workspace }}/${{ inputs.nuget-directory }}
 
       # Get the version from the branch name
       - id: get_version
@@ -61,13 +57,14 @@ jobs:
       - if: steps.tag_exists.outputs.exists == 'true'
         run: exit 1
 
-      # Publish the NuGet packages
-      - name: Publish NuGet packages
-        shell: pwsh
-        run: |
-          foreach($file in (Get-ChildItem "${{ github.workspace }}/${{ inputs.nuget-directory }}" -Recurse -Include *.nupkg)) {
-              dotnet nuget push $file --api-key "${{ secrets.nuget-token }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
-          }
+      # Publish the release to our package manager
+      - uses: ./.github/actions/nuget-publish
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+          project-paths: ${{ inputs.project-paths }}
+          version: ${{ steps.get_version.outputs.version }}
+          nuget-token: ${{ secrets.nuget-token }}
+          nuget-directory: ${{ github.workspace}}/nuget
 
       # Create a release for the tag
       - uses: ./.github/actions/release-create
