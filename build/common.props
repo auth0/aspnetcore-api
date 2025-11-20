@@ -20,11 +20,12 @@
   </PropertyGroup>
     <PropertyGroup>
     <LangVersion>latest</LangVersion>
-    <Version>0.0.0</Version>
+    <Version>1.0.0-beta.1</Version>
+    <AssemblyVersionNumber>0.0.0</AssemblyVersionNumber>
   </PropertyGroup>
   <PropertyGroup>
-    <AssemblyVersion>$(Version)</AssemblyVersion>
-    <AssemblyFileVersion>$(Version)</AssemblyFileVersion>
+    <AssemblyVersion>$(AssemblyVersionNumber)</AssemblyVersion>
+    <AssemblyFileVersion>$(AssemblyVersionNumber)</AssemblyFileVersion>
     <InformationalVersion>$(Version)</InformationalVersion>
     <PackageVersion>$(Version)</PackageVersion>
   </PropertyGroup>
