@@ -9,15 +9,7 @@
           "src": ".."
         }
       ],
-      "dest": "api",
-      "includePrivateMembers": false,
-      "disableGitFeatures": false,
-      "disableDefaultFilter": false,
-      "noRestore": false,
-      "namespaceLayout": "flattened",
-      "memberLayout": "samePage",
-      "EnumSortOrder": "alphabetic",
-      "allowCompilationErrors": false
+      "dest": "api"
     }
   ],
   "build": {
@@ -48,21 +40,18 @@
         ]
       }
     ],
-    "output": "../docs",
-    "globalMetadataFiles": [],
-    "fileMetadataFiles": [],
+    "dest": "../docs",
     "template": [
       "default",
-      "modern"
+      "modern",
+      "custom-template"
     ],
-    "postProcessors": [],
-    "keepFileLink": false,
-    "disableGitFeatures": false,
     "globalMetadata": {
       "_appTitle": "Auth0 ASP.NET Core API Authentication",
       "_appFooter": "Auth0 ASP.NET Core API Authentication Library",
       "_enableSearch": true,
       "_appLogoPath": "images/logo.png",
+      "_appFaviconPath": "images/logo.png",
       "_enableNewTab": true
     }
   }

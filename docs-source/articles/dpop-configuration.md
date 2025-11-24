@@ -7,9 +7,9 @@ This guide provides comprehensive documentation for all DPoP configuration optio
 - [Basic Configuration](#basic-configuration)
 - [DPoPOptions Properties](#dpopoptions-properties)
 - [DPoP Modes](#dpop-modes)
-- [Token Validation Parameters](#token-validation-parameters)
-- [Advanced Scenarios](#advanced-scenarios)
-- [Best Practices](#best-practices)
+- [Configuration Reference Table](#configuration-reference-table)
+- [Next Steps](#next-steps)
+- [Resources](#resources)
 
 ## Basic Configuration
 
@@ -169,7 +169,7 @@ options.Leeway = 60; // 1 minute
 
 - [DPoP Overview](dpop-overview.md) - Understanding DPoP concepts
 - [Getting Started with DPoP](dpop-getting-started.md) - Quick start guide
-- [API Reference](../api/Auth0.AspNetCore.Authentication.Api.DPoP.DPoPOptions.yml) - Full API documentation
+- [API Reference](../api/Auth0.AspNetCore.Authentication.Api.DPoP.DPoPOptions.html) - Full API documentation
 
 ## Resources
 

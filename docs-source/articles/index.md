@@ -30,8 +30,7 @@ This library simplifies the integration of Auth0 JWT authentication into your AS
 - [DPoP Configuration Reference](dpop-configuration.md) - Advanced DPoP settings
 
 ### Reference
-### Reference
-- [API Reference](../api/Auth0.AspNetCore.Authentication.Api.yml) - Complete API documentation
+- [API Reference](../api/Auth0.AspNetCore.Authentication.Api.html) - Complete API documentation
 
 ## Resources
 
@@ -67,4 +66,4 @@ Please do not report security vulnerabilities on the public GitHub issue tracker
 </p>
 <p align="center">Auth0 is an easy to implement, adaptable authentication and authorization platform. To learn more checkout <a href="https://auth0.com/why-auth0">Why Auth0?</a></p>
 <p align="center">
-This project is licensed under the Apache License 2.0. See the <a href="./LICENSE"> LICENSE</a> file for more info.</p>
+This project is licensed under the Apache License 2.0. See the <a href="https://github.com/auth0/aspnetcore-api/blob/master/LICENSE">LICENSE</a> file for more info.</p>

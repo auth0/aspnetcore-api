@@ -1,4 +1,8 @@
-# Auth0 ASP.NET Core API Authentication
+![](https://cdn.auth0.com/website/sdks/banners/auth0-dotnet-api-banner.png)
+
+[![NuGet Version](https://img.shields.io/nuget/v/Auth0.AspNetCore.Authentication.Api?style=flat&logo=nuget)](https://www.nuget.org/packages/Auth0.AspNetCore.Authentication.Api)
+![Downloads](https://img.shields.io/nuget/dt/Auth0.AspNetCore.Authentication.Api)
+[![License](https://img.shields.io/:license-Apache%202.0-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 
 Welcome to the official documentation for the Auth0 ASP.NET Core API Authentication library.
 
@@ -76,4 +80,4 @@ Add the following to your `appsettings.json`:
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](https://github.com/auth0/aspnetcore-api/blob/master/LICENSE) file for details.
