@@ -3,10 +3,4 @@
 - name: Configuration Guide
   href: configuration.md
 - name: DPoP (Proof-of-Possession)
-  items:
-  - name: DPoP Overview
-    href: dpop-overview.md
-  - name: Getting Started with DPoP
-    href: dpop-getting-started.md
-  - name: DPoP Configuration Reference
-    href: dpop-configuration.md
+  href: dpop-overview.md
