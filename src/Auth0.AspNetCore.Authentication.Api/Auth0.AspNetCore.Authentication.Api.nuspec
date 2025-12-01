@@ -30,7 +30,7 @@
 
     <dependencies>
       <group targetFramework="net8.0">
-        <dependency id="Microsoft.AspNetCore.Authentication.JwtBearer" version="8.0.20" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.AspNetCore.Authentication.JwtBearer" version="8.0.22" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.Logging.Abstractions" version="8.0.0" exclude="Build,Analyzers" />
       </group>
     </dependencies>
