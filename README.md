@@ -2,6 +2,9 @@
 
 [![Build and Test](https://github.com/auth0/aspnetcore-api/actions/workflows/build.yml/badge.svg)](https://github.com/auth0/aspnetcore-api/actions/workflows/build.yml)
 [![License](https://img.shields.io/:license-Apache%202.0-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
+[![NuGet Version](https://img.shields.io/nuget/v/Auth0.AspNetCore.Authentication.Api?style=flat&logo=nuget)](https://www.nuget.org/packages/Auth0.AspNetCore.Authentication.Api)
+![Downloads](https://img.shields.io/nuget/dt/Auth0.AspNetCore.Authentication.Api)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/auth0/aspnetcore-api)
 
 A library that provides **everything the standard JWT Bearer authentication offers**, with the added power of **built-in DPoP (Demonstration of Proof-of-Possession)** support for enhanced token security. Simplify your Auth0 JWT authentication integration for ASP.NET Core APIs with Auth0-specific configuration and validation.
 
