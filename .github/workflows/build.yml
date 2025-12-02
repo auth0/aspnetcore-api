@@ -26,7 +26,7 @@ jobs:
         run: dotnet build Auth0.AspNetCore.Authentication.Api.sln --configuration Release --no-restore
 
       - name: Run Unit tests
-        run: dotnet test tests/Auth0.AspNetCore.Authentication.Api.UnitTests/Auth0.AspNetCore.Authentication.Api.UnitTests.csproj
+        run: dotnet test tests/Auth0.AspNetCore.Authentication.Api.UnitTests/Auth0.AspNetCore.Authentication.Api.UnitTests.csproj --collect:"XPlat Code coverage" --results-directory ./TestResults/ /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura
 
       - name: Run Integration tests
         env:
@@ -44,6 +44,12 @@ jobs:
           DPOP_REQUIRED_CLIENT_ID: ${{ secrets.DPOP_REQUIRED_CLIENT_ID }}
           DPOP_REQUIRED_CLIENT_SECRET: ${{ secrets.DPOP_REQUIRED_CLIENT_SECRET }}
           DPOP_REQUIRED_DPOP_MODE: ${{ secrets.DPOP_REQUIRED_DPOP_MODE }}
-        run: dotnet test tests/Auth0.AspNetCore.Authentication.Api.IntegrationTests/Auth0.AspNetCore.Authentication.Api.IntegrationTests.csproj
+        run: dotnet test tests/Auth0.AspNetCore.Authentication.Api.IntegrationTests/Auth0.AspNetCore.Authentication.Api.IntegrationTests.csproj --collect:"XPlat Code coverage" --results-directory ./TestResults/ /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura
 
-#TODO: Capture and Update CodeCov report later.
+      - name: Update codecov report
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # pin@5.5.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./TestResults/**/coverage.cobertura.xml
+          fail_ci_if_error: false
+          verbose: true
