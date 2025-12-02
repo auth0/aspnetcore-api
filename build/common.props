@@ -21,7 +21,7 @@
     <PropertyGroup>
     <LangVersion>latest</LangVersion>
     <Version>1.0.0-beta.1</Version>
-    <AssemblyVersionNumber>0.0.0</AssemblyVersionNumber>
+    <AssemblyVersionNumber>1.0.0-beta.2</AssemblyVersionNumber>
   </PropertyGroup>
   <PropertyGroup>
     <AssemblyVersion>$(AssemblyVersionNumber)</AssemblyVersion>
