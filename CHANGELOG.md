@@ -1,5 +1,13 @@
 # Change Log
 
+## [1.0.0-beta.2](https://github.com/auth0/aspnetcore-api/tree/1.0.0-beta.2) (2025-12-02)
+
+**Fixed**
+- Update docfx configurations and broken links [\#15](https://github.com/auth0/aspnetcore-api/pull/15) ([kailash-b](https://github.com/kailash-b))
+
+**Security**
+- Update dependencies [\#16](https://github.com/auth0/aspnetcore-api/pull/16) ([kailash-b](https://github.com/kailash-b))
+
 ## [1.0.0-beta.1](https://github.com/auth0/aspnetcore-api/tree/1.0.0-beta.1) (2025-11-20)
 
 ### Installation
