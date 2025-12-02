@@ -1,6 +1,8 @@
 ![Auth0 API SDK for securing your .NET API Server using tokens from Auth0](https://cdn.auth0.com/website/sdks/banners/auth0-dotnet-api-banner.png)
 
 [![Build and Test](https://github.com/auth0/aspnetcore-api/actions/workflows/build.yml/badge.svg)](https://github.com/auth0/aspnetcore-api/actions/workflows/build.yml)
+[![API Reference](https://img.shields.io/badge/API-Reference-blue)](https://auth0.github.io/aspnetcore-api/index.html)
+[![codecov](https://codecov.io/gh/auth0/aspnetcore-api/branch/master/graph/badge.svg?token=0CF2BINXXJ)](https://codecov.io/gh/auth0/aspnetcore-api)
 [![License](https://img.shields.io/:license-Apache%202.0-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 [![NuGet Version](https://img.shields.io/nuget/v/Auth0.AspNetCore.Authentication.Api?style=flat&logo=nuget)](https://www.nuget.org/packages/Auth0.AspNetCore.Authentication.Api)
 ![Downloads](https://img.shields.io/nuget/dt/Auth0.AspNetCore.Authentication.Api)
