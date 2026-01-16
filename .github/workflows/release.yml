@@ -30,7 +30,7 @@ jobs:
     needs: [rl-scanner-aspnetcore-api]
     uses: ./.github/workflows/nuget-release.yml
     with:
-      dotnet-version: 8.0.x
+      dotnet-version: 10.0.x
       project-paths: "['src/Auth0.AspNetCore.Authentication.Api/Auth0.AspNetCore.Authentication.Api.csproj']"
     secrets:
       nuget-token: ${{ secrets.NUGET_APIKEY }}
@@ -51,7 +51,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       - name: Install DocFX
         run: dotnet tool install -g docfx
