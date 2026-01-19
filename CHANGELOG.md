@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.0.0-beta.3](https://github.com/auth0/aspnetcore-api/tree/1.0.0-beta.3) (2026-01-19)
+
+**Added**
+- Adds compile-time support for .NET 10 [\#25](https://github.com/auth0/aspnetcore-api/pull/25) ([kailash-b](https://github.com/kailash-b))
+
 ## [1.0.0-beta.2](https://github.com/auth0/aspnetcore-api/tree/1.0.0-beta.2) (2025-12-02)
 
 **Fixed**
