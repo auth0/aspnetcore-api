@@ -8,7 +8,7 @@
 ![Downloads](https://img.shields.io/nuget/dt/Auth0.AspNetCore.Authentication.Api)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/auth0/aspnetcore-api)
 
-A library that provides **everything the standard JWT Bearer authentication offers**, with the added power of **built-in DPoP (Demonstration of Proof-of-Possession)** support for enhanced token security. Simplify your Auth0 JWT authentication integration for ASP.NET Core APIs with Auth0-specific configuration and validation.
+A library that provides **everything the standard JWT Bearer authentication offers**, with the added power of **built-in DPoP (Demonstration of Proof-of-Possession)** support for enhanced token security and **Multiple Custom Domains** support for multi-tenant architectures. Simplify your Auth0 JWT authentication integration for ASP.NET Core APIs with Auth0-specific configuration and validation.
 
 ## Table of Contents
 
@@ -24,6 +24,7 @@ A library that provides **everything the standard JWT Bearer authentication offe
   - [DPoP Configuration Options](#dpop-configuration-options)
   - [DPoP Modes](#dpop-modes)
 - [Advanced Features](#advanced-features)
+  - [Multiple Custom Domains Support](#multiple-custom-domains-support)
   - [Using Full JWT Bearer Options](#using-full-jwt-bearer-options)
 - [Examples](#examples)
 - [Development](#development)
@@ -40,6 +41,7 @@ This library builds on top of the standard `Microsoft.AspNetCore.Authentication.
 
 - **Complete JWT Bearer Functionality** - All features from `Microsoft.AspNetCore.Authentication.JwtBearer` are available
 - **Built-in DPoP Support** - Industry-leading proof-of-possession token security per [RFC 9449](https://datatracker.ietf.org/doc/html/rfc9449)
+- **Multiple Custom Domains** - Accept tokens from multiple Auth0 Custom Domains.
 - **Auth0 Optimized** - Pre-configured for Auth0's authentication patterns
 - **Zero Lock-in** - Use standard JWT Bearer features alongside DPoP enhancements
 - **Single Package** - Everything you need in one dependency
@@ -251,6 +253,19 @@ Choose the right enforcement mode for your security requirements:
 > **Learn more:** See detailed DPoP examples and use cases in [EXAMPLES.md](./EXAMPLES.md#dpop-demonstration-of-proof-of-possession)
 
 ## Advanced Features
+
+### Multiple Custom Domains Support
+
+For multi-tenant architectures where your API needs to accept tokens from multiple Auth0 custom domains, this library provides seamless support without requiring separate authentication schemes or complex configuration.
+
+**Key capabilities:**
+- **Static Domain Lists** - Configure a fixed set of allowed Auth0 domains at startup
+- **Dynamic Domain Resolution** - Resolve allowed domains at runtime based on request context, database queries, or external APIs
+- **Automatic OIDC Discovery** - Handles OIDC metadata and JWKS fetching per domain with built-in caching
+- **Performance Optimized** - In-memory cache with configurable expiration reduces network calls
+- **Security First** - Validates token issuer before any network calls, rejects symmetric algorithms
+
+> **See code examples:** For complete implementation examples including static configuration, dynamic domain resolution, cache configuration, and SaaS integration patterns, see [EXAMPLES.md - Multiple Custom Domains](./EXAMPLES.md#multiple-custom-domains).
 
 ### Using Full JWT Bearer Options
 

@@ -8,6 +8,7 @@ public static class Auth0Constants
     public static class AuthenticationScheme
     {
         public const string Auth0 = "Auth0";
+        public const string Bearer = "Bearer ";
     }
 
     public static class DPoP
@@ -59,6 +60,22 @@ public static class Auth0Constants
                 public const string InvalidCnfClaim = "JWT Access token has invalid cnf confirmation claim";
                 public const string InvalidSignature = "Signature verification failed";
                 public const string UnknownError = "Unknown error";
+            }
+        }
+    }
+
+    public static class CustomDomains
+    {
+        public static class Error
+        {
+            public static class Description
+            {
+                public const string InvalidIssuer = "Token issuer is invalid or missing";
+                public const string IssuerNotAllowed = "Token issuer is not in the allowed list";
+                public const string ConfigurationFailed = "Failed to retrieve OIDC configuration";
+                public const string SymmetricAlgorithm = "Symmetric algorithms are not supported";
+                public const string ConfigurationConflict = "Cannot configure both Domains and DomainsResolver";
+                public const string InvalidToken = "Token invalid or missing";
             }
         }
     }
