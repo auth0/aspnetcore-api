@@ -14,13 +14,33 @@ public class TestWebApplicationFactory : IAsyncDisposable
 {
     private readonly Auth0Scenario _scenario;
     private readonly IHost _host;
+    private readonly string[]? _customDomains;
+    private readonly string[]? _validAudiences;
 
     public TestWebApplicationFactory(Auth0Scenario scenario)
     {
         _scenario = scenario;
+        _customDomains = null;
+        _host = CreateHost();
+    }
 
-        // Create and start the host once during construction
-        _host = new HostBuilder()
+    /// <summary>
+    /// Initializes a new instance for custom domains testing.
+    /// </summary>
+    /// <param name="scenario">Primary scenario for audience configuration.</param>
+    /// <param name="customDomains">Array of allowed custom domains.</param>
+    /// <param name="validAudiences">Optional array of valid audiences. When specified, tokens with any of these audiences will be accepted.</param>
+    public TestWebApplicationFactory(Auth0Scenario scenario, string[] customDomains, string[]? validAudiences = null)
+    {
+        _scenario = scenario;
+        _customDomains = customDomains ?? throw new ArgumentNullException(nameof(customDomains));
+        _validAudiences = validAudiences;
+        _host = CreateHost();
+    }
+
+    private IHost CreateHost()
+    {
+        var host = new HostBuilder()
             .ConfigureWebHost(webBuilder =>
             {
                 webBuilder.UseTestServer();
@@ -36,6 +56,9 @@ public class TestWebApplicationFactory : IAsyncDisposable
 
                 webBuilder.ConfigureServices((context, services) =>
                 {
+                    // Register HttpClient services (required by custom domains)
+                    services.AddHttpClient();
+
                     // Add Auth0 JWT validation
                     var authBuilder = services.AddAuth0ApiAuthentication(options =>
                     {
@@ -46,15 +69,47 @@ public class TestWebApplicationFactory : IAsyncDisposable
                             Audience = context.Configuration["Auth0:Audience"]
                                      ?? throw new InvalidOperationException("Auth0:Audience is required")
                         };
+
+                        // Support multiple audiences for custom domains testing
+                        if (_validAudiences != null && _validAudiences.Length > 0)
+                        {
+                            options.JwtBearerOptions.TokenValidationParameters.ValidAudiences = _validAudiences;
+                        }
+
+                        // Handle authentication failures gracefully for testing
+                        options.JwtBearerOptions.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+                        {
+                            OnAuthenticationFailed = context =>
+                            {
+                                // SecurityTokenException from custom domains validation should result in 401
+                                // Don't rethrow - let the middleware handle it as authentication failure
+                                return Task.CompletedTask;
+                            }
+                        };
                     });
+
+                    // Configure custom domains if provided
+                    if (_customDomains != null && _customDomains.Length > 0)
+                    {
+                        authBuilder.WithCustomDomains(customDomainsOptions =>
+                        {
+                            customDomainsOptions.Domains = _customDomains;
+
+                            // Use smaller cache for testing
+                            customDomainsOptions.ConfigurationManagerCache =
+                                new CustomDomains.MemoryConfigurationManagerCache(
+                                    maxSize: 10,
+                                    slidingExpiration: TimeSpan.FromMinutes(5));
+                        });
+                    }
 
                     // Configure DPoP based on scenario
                     if (_scenario.IsDPoPEnabled)
                     {
                         authBuilder.WithDPoP(dpopOptions =>
                         {
-                            dpopOptions.Mode = _scenario.IsDPoPRequired 
-                                ? DPoP.DPoPModes.Required 
+                            dpopOptions.Mode = _scenario.IsDPoPRequired
+                                ? DPoP.DPoPModes.Required
                                 : DPoP.DPoPModes.Allowed;
                         });
                     }
@@ -84,7 +139,8 @@ public class TestWebApplicationFactory : IAsyncDisposable
             })
             .Build();
 
-        _host.Start();
+        host.Start();
+        return host;
     }
 
     /// <summary>
