@@ -181,14 +181,23 @@ public static class AuthenticationBuilderExtensions
         var dPoPOptions = new DPoPOptions();
         configureDPoPOptions(dPoPOptions);
 
-        builder.Services.Configure<JwtBearerOptions>(builder.AuthenticationScheme,
-            jwtBearerOptions => { jwtBearerOptions.Events = DPoPEventsFactory.Create(builder.Options); });
-
         builder.Services.TryAddSingleton(dPoPOptions);
         builder.Services.TryAddScoped<IDPoPProofValidationService, DPoPProofValidationService>();
-        builder.Services.TryAddScoped<MessageReceivedHandler>();
+        builder.Services.TryAddScoped<DPoP.EventHandlers.MessageReceivedHandler>();
         builder.Services.TryAddScoped<TokenValidationHandler>();
         builder.Services.TryAddScoped<ChallengeHandler>();
+
+        // Configure DPoP events - reads current state from builder.Options and chains properly
+        builder.Services.Configure<JwtBearerOptions>(builder.AuthenticationScheme,
+            jwtBearerOptions =>
+            {
+                // Update Auth0Options to reflect current state for DPoPEventsFactory
+                builder.Options.JwtBearerOptions ??= new JwtBearerOptions();
+                builder.Options.JwtBearerOptions.Events = jwtBearerOptions.Events;
+
+                jwtBearerOptions.Events = DPoPEventsFactory.Create(builder.Options);
+            });
+
         return builder;
     }
 
@@ -227,18 +236,17 @@ public static class AuthenticationBuilderExtensions
         builder.Services.AddSingleton(options);
         builder.Services.AddSingleton(options.ConfigurationManagerCache);
         builder.Services.AddHttpContextAccessor();
+        builder.Services.AddHttpClient();
 
         builder.Services.TryAddSingleton<Auth0CustomDomainsConfigurationManager>();
 
         // Register event handler for OnMessageReceived validation
         builder.Services.TryAddScoped<CustomDomains.EventHandlers.MessageReceivedHandler>();
 
+        // Configure CustomDomains events - reads current state and chains properly
         builder.Services.Configure<JwtBearerOptions>(builder.AuthenticationScheme, jwtBearerOptions =>
         {
-            // Chain custom domains validation before any existing event handlers (user or DPoP)
-            // The handler will be resolved from DI at runtime during the event execution
-            jwtBearerOptions.Events = CustomDomainsEventsFactory.Create(
-                jwtBearerOptions.Events);
+            jwtBearerOptions.Events = CustomDomainsEventsFactory.Create(jwtBearerOptions);
         });
 
         // Register IPostConfigureOptions for setting ConfigurationManager

@@ -124,24 +124,6 @@ public class CustomDomainsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ProtectedEndpoint_WithTrailingSlashInIssuer_NormalizesAndValidates()
-    {
-        // Arrange
-        using HttpClient client = _factory!.CreateClient();
-
-        // Create token with trailing slash in issuer (should be normalized)
-        var issuerWithTrailingSlash = $"https://{_scenario1!.Domain}/";
-        var token = await _tokenHelperDomain1!.GetAccessTokenAsync();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        // Act
-        HttpResponseMessage response = await client.GetAsync("/api/protected");
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-    }
-
-    [Fact]
     public async Task PublicEndpoint_WithoutToken_ReturnsOk()
     {
         // Arrange

@@ -138,7 +138,7 @@ public class DisposableConfigurationManagerWrapperTests
     public async Task GetConfigurationAsync_WithCancellationToken_PropagatesToken()
     {
         // Arrange
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         CancellationToken token = cts.Token;
         var mockInnerManager = new Mock<IConfigurationManager<OpenIdConnectConfiguration>>();
         mockInnerManager

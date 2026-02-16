@@ -13,10 +13,12 @@ internal static class CustomDomainsEventsFactory
     /// Creates a new instance of <see cref="JwtBearerEvents"/> with custom domains validation
     /// chained before any existing event handlers.
     /// </summary>
-    /// <param name="existingEvents">The existing JWT Bearer events (may be <c>null</c> or contain user-configured handlers).</param>
+    /// <param name="jwtBearerOptions">The JwtBearerOptions containing current event handlers.</param>
     /// <returns>A configured <see cref="JwtBearerEvents"/> instance with chained event handlers.</returns>
-    internal static JwtBearerEvents Create(JwtBearerEvents? existingEvents)
+    internal static JwtBearerEvents Create(JwtBearerOptions jwtBearerOptions)
     {
+        var existingEvents = jwtBearerOptions.Events;
+
         return new JwtBearerEvents
         {
             OnMessageReceived = ProxyEvent(
