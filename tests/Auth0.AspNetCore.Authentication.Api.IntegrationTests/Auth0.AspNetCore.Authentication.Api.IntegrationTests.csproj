@@ -10,8 +10,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <!-- Using v7.2.0 as it's the last version with Apache license. Newer versions use different licensing -->
-        <PackageReference Include="FluentAssertions" Version="7.2.0"/>
+        <!-- Using v7.2.1 as it's the last version with Apache license. Newer versions use different licensing -->
+        <PackageReference Include="FluentAssertions" Version="7.2.1"/>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1"/>
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.2" />
         <PackageReference Include="xunit" Version="2.9.3"/>
