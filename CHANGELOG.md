@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.0.0-beta.4](https://github.com/auth0/aspnetcore-api/tree/1.0.0-beta.4) (2026-02-26)
+
+**Security**
+- chore: Upgrade dependencies [\#34](https://github.com/auth0/aspnetcore-api/pull/34) ([kailash-b](https://github.com/kailash-b))
+
 ## [1.0.0-beta.3](https://github.com/auth0/aspnetcore-api/tree/1.0.0-beta.3) (2026-01-19)
 
 **Added**
