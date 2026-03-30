@@ -6,11 +6,26 @@ namespace Auth0.AspNetCore.Authentication.Api.UnitTests.CustomDomains;
 
 public class Auth0CustomDomainsPostConfigureOptionsTests
 {
+    private Auth0CustomDomainsConfigurationManager CreateConfigurationManager()
+    {
+        var mockHttpContextAccessor = new Mock<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
+        var mockCache = new Mock<IConfigurationManagerCache>();
+        var mockLogger = new Mock<Microsoft.Extensions.Logging.ILogger<Auth0CustomDomainsConfigurationManager>>();
+        var options = new Auth0CustomDomainsOptions { Domains = ["test.auth0.com"] };
+
+        return new Auth0CustomDomainsConfigurationManager(
+            mockHttpContextAccessor.Object,
+            options,
+            mockCache.Object,
+            null,
+            mockLogger.Object);
+    }
+
     [Fact]
     public void Constructor_WithNullConfigurationManager_ThrowsArgumentNullException()
     {
         // Act
-        Action act = () => new Auth0CustomDomainsPostConfigureOptions(null!);
+        Action act = () => new Auth0CustomDomainsPostConfigureOptions(null!, "Auth0");
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -18,26 +33,29 @@ public class Auth0CustomDomainsPostConfigureOptionsTests
     }
 
     [Fact]
-    public void PostConfigure_InjectsConfigurationManagerIntoJwtBearerOptions()
+    public void Constructor_WithNullAuthenticationScheme_ThrowsArgumentNullException()
     {
         // Arrange
-        var mockHttpContextAccessor = new Mock<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
-        var mockCache = new Mock<IConfigurationManagerCache>();
-        var mockLogger = new Mock<Microsoft.Extensions.Logging.ILogger<Auth0CustomDomainsConfigurationManager>>();
-        var options = new Auth0CustomDomainsOptions { Domains = ["test.auth0.com"] };
+        var configurationManager = CreateConfigurationManager();
 
-        var configurationManager = new Auth0CustomDomainsConfigurationManager(
-            mockHttpContextAccessor.Object,
-            options,
-            mockCache.Object,
-            null,
-            mockLogger.Object);
+        // Act
+        Action act = () => new Auth0CustomDomainsPostConfigureOptions(configurationManager, null!);
 
-        var postConfigure = new Auth0CustomDomainsPostConfigureOptions(configurationManager);
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("authenticationScheme");
+    }
+
+    [Fact]
+    public void PostConfigure_WithMatchingScheme_InjectsConfigurationManager()
+    {
+        // Arrange
+        var configurationManager = CreateConfigurationManager();
+        var postConfigure = new Auth0CustomDomainsPostConfigureOptions(configurationManager, "Auth0");
         var jwtBearerOptions = new JwtBearerOptions();
 
         // Act
-        postConfigure.PostConfigure("TestScheme", jwtBearerOptions);
+        postConfigure.PostConfigure("Auth0", jwtBearerOptions);
 
         // Assert
         jwtBearerOptions.ConfigurationManager.Should().BeSameAs(configurationManager,
@@ -45,53 +63,27 @@ public class Auth0CustomDomainsPostConfigureOptionsTests
     }
 
     [Fact]
-    public void PostConfigure_CalledMultipleTimes_UsesSameSingletonInstance()
+    public void PostConfigure_WithNonMatchingScheme_DoesNotSetConfigurationManager()
     {
         // Arrange
-        var mockHttpContextAccessor = new Mock<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
-        var mockCache = new Mock<IConfigurationManagerCache>();
-        var mockLogger = new Mock<Microsoft.Extensions.Logging.ILogger<Auth0CustomDomainsConfigurationManager>>();
-        var options = new Auth0CustomDomainsOptions { Domains = ["test.auth0.com"] };
-
-        var configurationManager = new Auth0CustomDomainsConfigurationManager(
-            mockHttpContextAccessor.Object,
-            options,
-            mockCache.Object,
-            null,
-            mockLogger.Object);
-
-        var postConfigure = new Auth0CustomDomainsPostConfigureOptions(configurationManager);
-        var jwtBearerOptions1 = new JwtBearerOptions();
-        var jwtBearerOptions2 = new JwtBearerOptions();
+        var configurationManager = CreateConfigurationManager();
+        var postConfigure = new Auth0CustomDomainsPostConfigureOptions(configurationManager, "Auth0");
+        var jwtBearerOptions = new JwtBearerOptions();
 
         // Act
-        postConfigure.PostConfigure("Scheme1", jwtBearerOptions1);
-        postConfigure.PostConfigure("Scheme2", jwtBearerOptions2);
+        postConfigure.PostConfigure("OtherIdP", jwtBearerOptions);
 
         // Assert
-        jwtBearerOptions1.ConfigurationManager.Should().BeSameAs(configurationManager);
-        jwtBearerOptions2.ConfigurationManager.Should().BeSameAs(configurationManager);
-        jwtBearerOptions1.ConfigurationManager.Should().BeSameAs(jwtBearerOptions2.ConfigurationManager,
-            "both options should reference the same singleton instance");
+        jwtBearerOptions.ConfigurationManager.Should().BeNull(
+            "a non-matching scheme should not have its ConfigurationManager replaced");
     }
 
     [Fact]
     public void PostConfigure_OverwritesExistingConfigurationManager()
     {
         // Arrange
-        var mockHttpContextAccessor = new Mock<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
-        var mockCache = new Mock<IConfigurationManagerCache>();
-        var mockLogger = new Mock<Microsoft.Extensions.Logging.ILogger<Auth0CustomDomainsConfigurationManager>>();
-        var options = new Auth0CustomDomainsOptions { Domains = ["test.auth0.com"] };
-
-        var configurationManager = new Auth0CustomDomainsConfigurationManager(
-            mockHttpContextAccessor.Object,
-            options,
-            mockCache.Object,
-            null,
-            mockLogger.Object);
-
-        var postConfigure = new Auth0CustomDomainsPostConfigureOptions(configurationManager);
+        var configurationManager = CreateConfigurationManager();
+        var postConfigure = new Auth0CustomDomainsPostConfigureOptions(configurationManager, "Auth0");
 
         var existingConfigurationManager = new Mock<Microsoft.IdentityModel.Protocols.IConfigurationManager<
             Microsoft.IdentityModel.Protocols.OpenIdConnect.OpenIdConnectConfiguration>>();
@@ -102,7 +94,7 @@ public class Auth0CustomDomainsPostConfigureOptionsTests
         };
 
         // Act
-        postConfigure.PostConfigure("TestScheme", jwtBearerOptions);
+        postConfigure.PostConfigure("Auth0", jwtBearerOptions);
 
         // Assert
         jwtBearerOptions.ConfigurationManager.Should().NotBeSameAs(existingConfigurationManager.Object,

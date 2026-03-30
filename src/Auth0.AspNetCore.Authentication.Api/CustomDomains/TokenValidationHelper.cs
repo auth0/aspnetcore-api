@@ -84,20 +84,39 @@ internal static class TokenValidationHelper
     }
 
     /// <summary>
-    /// Determines whether the specified algorithm is a symmetric signing algorithm.
+    /// Determines whether the specified algorithm is unsupported for custom domains validation.
     /// </summary>
     /// <param name="algorithm">The algorithm identifier from the JWT header.</param>
     /// <returns>
-    /// <c>true</c> if the algorithm is symmetric (e.g., HS256, HS384, HS512); otherwise, <c>false</c>.
+    /// <c>true</c> if the algorithm is unsupported; otherwise, <c>false</c>.
     /// </returns>
     /// <remarks>
-    /// Symmetric algorithms (HMAC-based) are not supported for custom domains validation
-    /// as they require a shared secret and cannot be validated using public JWKS.
+    /// Unsupported algorithms include:
+    /// <list type="bullet">
+    ///   <item><description>Missing or empty algorithm — no algorithm specified is inherently unsupported.</description></item>
+    ///   <item><description><c>none</c> — unsigned tokens are never accepted.</description></item>
+    ///   <item><description>HMAC-based algorithms (HS256, HS384, HS512) — require a shared secret
+    ///   and cannot be validated using public JWKS.</description></item>
+    /// </list>
     /// </remarks>
-    internal static bool IsSymmetricAlgorithm(string? algorithm)
+    internal static bool IsUnsupportedAlgorithm(string? algorithm)
     {
-        return !string.IsNullOrEmpty(algorithm) &&
-               algorithm.StartsWith("HS", StringComparison.OrdinalIgnoreCase);
+        if (string.IsNullOrEmpty(algorithm))
+        {
+            return true;
+        }
+
+        if (algorithm.Equals("none", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (algorithm.StartsWith("HS", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>

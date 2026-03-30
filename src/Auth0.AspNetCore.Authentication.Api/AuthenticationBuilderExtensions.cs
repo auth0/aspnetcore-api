@@ -249,10 +249,13 @@ public static class AuthenticationBuilderExtensions
             jwtBearerOptions.Events = CustomDomainsEventsFactory.Create(jwtBearerOptions);
         });
 
-        // Register IPostConfigureOptions for setting ConfigurationManager
-        builder.Services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IPostConfigureOptions<JwtBearerOptions>,
-                Auth0CustomDomainsPostConfigureOptions>());
+        // Register IPostConfigureOptions for setting ConfigurationManager.
+        // Uses AddSingleton with a factory so the scheme name is captured and only the matching scheme is configured.
+        // TryAddEnumerable cannot be used with factory registrations as it requires a concrete implementation type.
+        builder.Services.AddSingleton<IPostConfigureOptions<JwtBearerOptions>>(sp =>
+            new Auth0CustomDomainsPostConfigureOptions(
+                sp.GetRequiredService<Auth0CustomDomainsConfigurationManager>(),
+                builder.AuthenticationScheme));
 
         return builder;
     }
@@ -349,6 +352,32 @@ public static class AuthenticationBuilderExtensions
                 {
                     throw new InvalidOperationException(
                         "Domains list contains null or empty entries.");
+                }
+
+                var domainTrimmed = domain.TrimEnd('/');
+
+                // Determine the hostname portion to validate
+                // BuildIssuerUrl supports bare hostnames, https://, and http:// (for testing/localhost)
+                string hostname;
+                if (domainTrimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    hostname = domainTrimmed[8..];
+                }
+                else if (domainTrimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                {
+                    hostname = domainTrimmed[7..];
+                }
+                else
+                {
+                    hostname = domainTrimmed;
+                }
+
+                if (!Uri.TryCreate($"https://{hostname}", UriKind.Absolute, out Uri? uri)
+                    || uri.Host != hostname
+                    || uri.PathAndQuery != "/")
+                {
+                    throw new InvalidOperationException(
+                        $"Invalid domain format: '{domain}'. Must be a plain hostname (e.g. 'tenant.auth0.com').");
                 }
             }
         }

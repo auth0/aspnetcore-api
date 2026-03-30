@@ -31,4 +31,49 @@ public class TokenValidationHelperTests
 
         result.Should().Be(expected);
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void IsUnsupportedAlgorithm_WithNullOrEmpty_ReturnsTrue(string? algorithm)
+    {
+        TokenValidationHelper.IsUnsupportedAlgorithm(algorithm).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("none")]
+    [InlineData("NONE")]
+    [InlineData("None")]
+    [InlineData("nOnE")]
+    public void IsUnsupportedAlgorithm_WithNoneAlgorithm_ReturnsTrue(string algorithm)
+    {
+        TokenValidationHelper.IsUnsupportedAlgorithm(algorithm).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("HS256")]
+    [InlineData("HS384")]
+    [InlineData("HS512")]
+    [InlineData("hs256")]
+    [InlineData("Hs512")]
+    public void IsUnsupportedAlgorithm_WithHsAlgorithms_ReturnsTrue(string algorithm)
+    {
+        TokenValidationHelper.IsUnsupportedAlgorithm(algorithm).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("RS256")]
+    [InlineData("RS384")]
+    [InlineData("RS512")]
+    [InlineData("ES256")]
+    [InlineData("ES384")]
+    [InlineData("ES512")]
+    [InlineData("PS256")]
+    [InlineData("PS384")]
+    [InlineData("PS512")]
+    [InlineData("EdDSA")]
+    public void IsUnsupportedAlgorithm_WithAsymmetricAlgorithms_ReturnsFalse(string algorithm)
+    {
+        TokenValidationHelper.IsUnsupportedAlgorithm(algorithm).Should().BeFalse();
+    }
 }

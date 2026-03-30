@@ -142,7 +142,7 @@ public class Auth0CustomDomainsConfigurationManagerIntegrationTests
 
         // Assert
         await act.Should().ThrowAsync<SecurityTokenException>()
-            .WithMessage("Symmetric algorithms are not supported.");
+            .WithMessage("Token uses an unsupported algorithm");
 
         // Verify warning was logged
         _mockLogger.Verify(
@@ -181,7 +181,7 @@ public class Auth0CustomDomainsConfigurationManagerIntegrationTests
 
         // Assert
         await act.Should().ThrowAsync<SecurityTokenException>()
-            .WithMessage("Symmetric algorithms are not supported.");
+            .WithMessage("Token uses an unsupported algorithm");
     }
 
     [Fact]
@@ -502,6 +502,33 @@ public class Auth0CustomDomainsConfigurationManagerIntegrationTests
             .WithMessage("No token found in request.");
     }
 
+    [Theory]
+    [InlineData("none")]
+    [InlineData("NONE")]
+    [InlineData("None")]
+    public async Task GetConfigurationAsync_WithNoneAlgorithm_ThrowsSecurityTokenException(string algorithm)
+    {
+        // Arrange — token signed with HS256 but with alg header overridden to "none"
+        var token = CreateJwtTokenWithAlgorithmOverride("https://tenant1.auth0.com", algorithm);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers.Authorization = $"Bearer {token}";
+        _mockHttpContextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+
+        var manager = new Auth0CustomDomainsConfigurationManager(
+            _mockHttpContextAccessor.Object,
+            _options,
+            _mockCache.Object,
+            null,
+            _mockLogger.Object);
+
+        // Act
+        Func<Task> act = async () => await manager.GetConfigurationAsync(CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<SecurityTokenException>()
+            .WithMessage("Token uses an unsupported algorithm");
+    }
+
     private static string CreateJwtToken(string issuer, string algorithm)
     {
         var securityKey = new SymmetricSecurityKey(new byte[32]);
@@ -516,6 +543,24 @@ public class Auth0CustomDomainsConfigurationManagerIntegrationTests
 
         // Override the algorithm in the header
         token.Header["alg"] = algorithm;
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private static string CreateJwtTokenWithAlgorithmOverride(string issuer, string algorithmOverride)
+    {
+        var securityKey = new SymmetricSecurityKey(new byte[32]);
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: "test-audience",
+            claims: [new Claim("sub", "test-user")],
+            expires: DateTime.UtcNow.AddHours(1),
+            signingCredentials: credentials);
+
+        // Set the exact algorithm string (preserves casing) to test case-insensitive rejection
+        token.Header["alg"] = algorithmOverride;
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }

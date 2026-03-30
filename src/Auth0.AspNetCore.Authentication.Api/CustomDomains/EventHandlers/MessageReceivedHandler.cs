@@ -35,10 +35,10 @@ internal class MessageReceivedHandler(
                 return;
             }
 
-            if (TokenValidationHelper.IsSymmetricAlgorithm(algorithm))
+            if (TokenValidationHelper.IsUnsupportedAlgorithm(algorithm))
             {
-                _logger.LogError("Rejected token with symmetric algorithm: {Algorithm}", algorithm);
-                context.Fail(Auth0Constants.CustomDomains.Error.Description.SymmetricAlgorithm);
+                _logger.LogError("Rejected token with unsupported algorithm: {Algorithm}", algorithm);
+                context.Fail(Auth0Constants.CustomDomains.Error.Description.UnsupportedAlgorithm);
                 return;
             }
 

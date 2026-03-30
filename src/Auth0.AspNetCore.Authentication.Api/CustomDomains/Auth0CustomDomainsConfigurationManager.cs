@@ -74,11 +74,11 @@ internal sealed class Auth0CustomDomainsConfigurationManager(
             throw new SecurityTokenException("Invalid token format.");
         }
 
-        // Reject symmetric algorithms before any network calls
-        if (TokenValidationHelper.IsSymmetricAlgorithm(algorithm))
+        // Reject unsupported algorithms (none, HS*, missing) before any network calls
+        if (TokenValidationHelper.IsUnsupportedAlgorithm(algorithm))
         {
-            logger.LogWarning("Rejected token with symmetric algorithm: {Algorithm}", algorithm);
-            throw new SecurityTokenException("Symmetric algorithms are not supported.");
+            logger.LogWarning("Rejected token with unsupported algorithm: {Algorithm}", algorithm);
+            throw new SecurityTokenException(Auth0Constants.CustomDomains.Error.Description.UnsupportedAlgorithm);
         }
 
         // Resolve allowed domains

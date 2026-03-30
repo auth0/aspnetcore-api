@@ -302,4 +302,82 @@ public class AuthenticationBuilderExtensionsTest
     }
 
     #endregion
+
+    #region ValidateCustomDomainsOptionsTests
+
+    private Auth0ApiAuthenticationBuilder CreateAuth0Builder()
+    {
+        return _authenticationBuilder.AddAuth0ApiAuthentication(options =>
+        {
+            options.Domain = "tenant.auth0.com";
+            options.JwtBearerOptions = new JwtBearerOptions { Audience = "https://api.example.com" };
+        });
+    }
+
+    [Theory]
+    [InlineData("tenant.auth0.com")]
+    [InlineData("https://tenant.auth0.com")]
+    [InlineData("http://tenant.auth0.com")]
+    [InlineData("tenant.auth0.com/")]
+    [InlineData("https://tenant.auth0.com/")]
+    public void WithCustomDomains_WithValidDomainFormat_DoesNotThrow(string domain)
+    {
+        // Arrange
+        Auth0ApiAuthenticationBuilder builder = CreateAuth0Builder();
+
+        // Act
+        Action act = () => builder.WithCustomDomains(opts => opts.Domains = [domain]);
+
+        // Assert
+        act.Should().NotThrow();
+    }
+
+    [Theory]
+    [InlineData("tenant.auth0.com/path")]
+    [InlineData("https://tenant.auth0.com/path")]
+    [InlineData("http://tenant.auth0.com/path")]
+    public void WithCustomDomains_WithPathComponent_ThrowsInvalidOperationException(string domain)
+    {
+        // Arrange
+        Auth0ApiAuthenticationBuilder builder = CreateAuth0Builder();
+
+        // Act
+        Action act = () => builder.WithCustomDomains(opts => opts.Domains = [domain]);
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage($"Invalid domain format: '{domain}'*");
+    }
+
+    [Fact]
+    public void WithCustomDomains_WithQueryString_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        Auth0ApiAuthenticationBuilder builder = CreateAuth0Builder();
+        const string domain = "tenant.auth0.com?q=1"; // query string
+
+        // Act
+        Action act = () => builder.WithCustomDomains(opts => opts.Domains = [domain]);
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage($"Invalid domain format: '{domain}'*");
+    }
+
+    [Fact]
+    public void WithCustomDomains_WithEmbeddedWhitespace_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        Auth0ApiAuthenticationBuilder builder = CreateAuth0Builder();
+        const string domain = "tenant .auth0.com";
+
+        // Act
+        Action act = () => builder.WithCustomDomains(opts => opts.Domains = [domain]);
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage($"Invalid domain format: '{domain}'*");
+    }
+
+    #endregion
 }

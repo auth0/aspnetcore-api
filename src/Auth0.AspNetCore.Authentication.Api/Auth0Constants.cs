@@ -73,7 +73,7 @@ public static class Auth0Constants
                 public const string InvalidIssuer = "Token issuer is invalid or missing";
                 public const string IssuerNotAllowed = "Token issuer is not in the allowed list";
                 public const string ConfigurationFailed = "Failed to retrieve OIDC configuration";
-                public const string SymmetricAlgorithm = "Symmetric algorithms are not supported";
+                public const string UnsupportedAlgorithm = "Token uses an unsupported algorithm";
                 public const string ConfigurationConflict = "Cannot configure both Domains and DomainsResolver";
                 public const string InvalidToken = "Token invalid or missing";
             }
