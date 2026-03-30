@@ -109,7 +109,7 @@ internal static class TokenValidationHelper
     /// The normalized issuer URL if validation succeeds; otherwise, <c>null</c>.
     /// </returns>
     /// <remarks>
-    /// The validation performs case-insensitive comparison and handles trailing slashes.
+    /// The validation performs case-sensitive comparison and handles trailing slashes.
     /// Domains in the allowed list can be specified with or without the "https://" prefix.
     /// </remarks>
     internal static string? ValidateIssuer(string? issuer, IReadOnlyList<string> allowedDomains)
@@ -124,7 +124,7 @@ internal static class TokenValidationHelper
         foreach (var domain in allowedDomains)
         {
             var expectedIssuer = BuildIssuerUrl(domain);
-            if (string.Equals(normalizedIssuer, expectedIssuer, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(normalizedIssuer, expectedIssuer))
             {
                 return expectedIssuer;
             }
@@ -148,7 +148,7 @@ internal static class TokenValidationHelper
     /// </remarks>
     internal static string BuildIssuerUrl(string domain)
     {
-        if (domain.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        if (domain.StartsWith("https://", StringComparison.OrdinalIgnoreCase) || domain.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
         {
             return domain.TrimEnd('/');
         }
