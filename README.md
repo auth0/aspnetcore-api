@@ -8,7 +8,7 @@
 ![Downloads](https://img.shields.io/nuget/dt/Auth0.AspNetCore.Authentication.Api)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/auth0/aspnetcore-api)
 
-A library that provides **everything the standard JWT Bearer authentication offers**, with the added power of **built-in DPoP (Demonstration of Proof-of-Possession)** support for enhanced token security and **Multiple Custom Domains** support for multi-tenant architectures. Simplify your Auth0 JWT authentication integration for ASP.NET Core APIs with Auth0-specific configuration and validation.
+A library that provides **everything the standard JWT Bearer authentication offers**, with the added power of **built-in DPoP (Demonstration of Proof-of-Possession)** support for enhanced token security and **Multiple Custom Domains** support. Simplify your Auth0 JWT authentication integration for ASP.NET Core APIs with Auth0-specific configuration and validation.
 
 ## Table of Contents
 
@@ -24,7 +24,9 @@ A library that provides **everything the standard JWT Bearer authentication offe
   - [DPoP Configuration Options](#dpop-configuration-options)
   - [DPoP Modes](#dpop-modes)
 - [Advanced Features](#advanced-features)
-  - [Multiple Custom Domains Support](#multiple-custom-domains-support)
+  - [Multiple Custom Domain (MCD) Support](#multiple-custom-domain-mcd-support)
+    - [Configuration](#configuration)
+    - [Security requirements](#security-requirements)
   - [Using Full JWT Bearer Options](#using-full-jwt-bearer-options)
 - [Examples](#examples)
 - [Development](#development)
@@ -254,18 +256,39 @@ Choose the right enforcement mode for your security requirements:
 
 ## Advanced Features
 
-### Multiple Custom Domains Support
+### Multiple Custom Domain (MCD) Support
 
-For multi-tenant architectures where your API needs to accept tokens from multiple Auth0 custom domains, this library provides seamless support without requiring separate authentication schemes or complex configuration.
+Multiple Custom Domains (MCD) lets you accept tokens from multiple Auth0 custom domains while keeping a single SDK instance. This is useful when one application serves multiple custom domains, each mapped to a different Auth0 custom domain.
 
 **Key capabilities:**
-- **Static Domain Lists** - Configure a fixed set of allowed Auth0 domains at startup
+- **Static Domain Lists** - Configure a fixed set of allowed Auth0 custom domains at startup
 - **Dynamic Domain Resolution** - Resolve allowed domains at runtime based on request context, database queries, or external APIs
 - **Automatic OIDC Discovery** - Handles OIDC metadata and JWKS fetching per domain with built-in caching
 - **Performance Optimized** - In-memory cache with configurable expiration reduces network calls
 - **Security First** - Validates token issuer before any network calls, rejects symmetric algorithms
 
-> **See code examples:** For complete implementation examples including static configuration, dynamic domain resolution, cache configuration, and SaaS integration patterns, see [EXAMPLES.md - Multiple Custom Domains](./EXAMPLES.md#multiple-custom-domains).
+### Configuration
+
+```csharp
+builder.Services.AddAuth0ApiAuthentication(options =>
+{
+    options.JwtBearerOptions = new JwtBearerOptions
+    {
+        Audience = builder.Configuration["Auth0:Audience"]
+    };
+})
+.WithCustomDomains(options =>
+{
+    // Example: resolve from a request header
+    options.DomainsResolver = async (httpContext, cancellationToken) =>
+    {
+        var tenantService = httpContext.RequestServices.GetRequiredService<ITenantService>();
+        return await tenantService.GetAllowedDomainsAsync(cancellationToken);
+    };
+});
+```
+
+For detailed configuration options, caching strategies, security requirements, and more examples, see [EXAMPLES.md - Multiple Custom Domains](./EXAMPLES.md#multiple-custom-domains).
 
 ### Using Full JWT Bearer Options
 
@@ -315,6 +338,18 @@ builder.Services.AddAuth0ApiAuthentication(options =>
 > - Error handling and logging
 > - And much more!
 
+### Security requirements
+
+When configuring the `DomainsResolver`, you are responsible for ensuring that all resolved domains are trusted. Mis-configuring the domain resolver is a critical security risk that can lead to authentication bypass on the relying party (RP) or expose the application to Server-Side Request Forgery (SSRF).
+
+**Single tenant limitation:**
+The `DomainsResolver` is intended solely for multiple custom domains belonging to the same Auth0 tenant. It is not a supported mechanism for connecting multiple Auth0 tenants to a single application.
+
+**Secure proxy requirement:**
+When using MCD, your application must be deployed behind a secure edge or reverse proxy (e.g., Cloudflare, Nginx, or AWS ALB). The proxy must be configured to sanitize and overwrite `Host` and `X-Forwarded-Host` headers before they reach your application.
+
+Without a trusted proxy layer to validate these headers, an attacker can manipulate the domain resolution process. This can result in malicious redirects, where users are sent to unauthorized or fraudulent endpoints during the authentication flows.
+
 ## Examples
 
 For comprehensive, copy-pastable code examples covering various scenarios, see **[EXAMPLES.md](./EXAMPLES.md)**:
@@ -322,6 +357,7 @@ For comprehensive, copy-pastable code examples covering various scenarios, see *
 - **Getting Started** - Basic authentication and endpoint protection
 - **Configuration** - Custom token validation and settings
 - **DPoP** - All DPoP modes with practical examples
+- **Multiple Custom Domains** - Static domain lists, dynamic resolution, cache configuration
 - **Authorization** - Scopes, permissions, roles, and custom handlers
 - **Advanced Scenarios** - Claims, events, custom error responses
 - **Integration** - SignalR and other integrations

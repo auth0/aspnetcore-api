@@ -9,7 +9,7 @@ namespace Auth0.AspNetCore.Authentication.Api.CustomDomains;
 public class Auth0CustomDomainsOptions
 {
     /// <summary>
-    /// List of Auth0 domains for multi-tenant scenarios.
+    /// List of Auth0 domains for multi-domain scenarios.
     /// Each domain should be in the format: tenant.auth0.com (without <c>https://</c>).
     /// </summary>
     /// <remarks>
@@ -22,7 +22,7 @@ public class Auth0CustomDomainsOptions
     /// Delegate for dynamically resolving allowed domains at runtime.
     /// </summary>
     /// <remarks>
-    /// Use this for fully multi-tenant APIs where domains are determined dynamically
+    /// Use this for fully multi-domain APIs where domains are determined dynamically
     /// based on request context, database queries, or external APIs.
     /// Mutually exclusive with <see cref="Domains"/>.
     /// The delegate receives the full <see cref="HttpContext"/>.

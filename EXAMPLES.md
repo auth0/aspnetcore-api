@@ -18,6 +18,7 @@ This document provides practical, copy-pastable code examples for common scenari
    - 4.1 [Basic Custom Domains Configuration](#41-basic-custom-domains-configuration)
    - 4.2 [Dynamic Domain Resolution](#42-dynamic-domain-resolution)
    - 4.3 [Custom Cache Configuration](#43-custom-cache-configuration)
+   - [Security requirements](#security-requirements)
 5. **Authorization**
    - 5.1 [Scope-Based Authorization with Policies](#51-scope-based-authorization-with-policies)
    - 5.2 [Permission-Based Authorization](#52-permission-based-authorization)
@@ -380,11 +381,13 @@ app.Run();
 
 ## Multiple Custom Domains
 
-Multiple Custom Domains enables the same code to accept tokens from multiple custom domains.
+Multiple Custom Domains (MCD) lets you accept tokens from multiple Auth0 custom domains while keeping a single SDK instance. This is useful when one application serves multiple custom domains, each mapped to a different Auth0 custom domain.
+
+MCD is intended for the custom domains of a single Auth0 tenant. It is not a supported way to connect multiple Auth0 tenants to one application.
 
 ### 4.1 Basic Custom Domains Configuration
 
-Configure a static list of allowed Auth0 domains for multi-tenant scenarios.
+Configure a static list of allowed Auth0 custom domains when they are known at application startup.
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
@@ -400,14 +403,14 @@ builder.Services.AddAuth0ApiAuthentication(options =>
         Audience = builder.Configuration["Auth0:Audience"]
     };
 })
-.WithCustomDomains(customDomainsOptions =>
+.WithCustomDomains(options =>
 {
-    // Static list of allowed Auth0 domains
-    customDomainsOptions.Domains = new[]
+    // Static list of allowed Auth0 custom domains
+    options.Domains = new[]
     {
-        "tenant1.auth0.com",
-        "tenant2.auth0.com",
-        "tenant3.eu.auth0.com"
+        "brand-1.custom-domain.com",
+        "brand-2.custom-domain.com",
+        "brand-3.custom-domain.com"
     };
 });
 
@@ -419,7 +422,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // This endpoint accepts tokens from any of the configured domains
-app.MapGet("/api/data", () => 
+app.MapGet("/api/data", () =>
     Results.Ok(new { message = "Authenticated from any allowed domain" }))
     .RequireAuthorization();
 
@@ -428,14 +431,13 @@ app.Run();
 
 **What this does:**
 - Accepts JWT tokens issued by any domain in the `Domains` list
-- Automatically validates token issuer against the allowed list
+- Automatically validates token issuer against the allowed list before any network calls
 - Rejects tokens from unauthorized domains with 401 Unauthorized
-- Uses in-memory cache for OIDC configurations (100 entries, 10-minute sliding expiration)
+- Uses in-memory cache for OIDC configurations (100 entries, 10-minute sliding expiration by default)
 
 **Use this when:**
-- You have a fixed set of Auth0 tenants (e.g., different regions or customer tiers)
-- Domain list is known at application startup
-- You need simple, straightforward multi-tenant configuration
+- You have a fixed set of Auth0 custom domains known at application startup
+- You need simple, straightforward multi-domain configuration
 
 ---
 
@@ -450,7 +452,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Example: Register a tenant service for domain resolution
+// Register a tenant service for domain resolution
 builder.Services.AddSingleton<ITenantService, TenantService>();
 
 builder.Services.AddAuth0ApiAuthentication(options =>
@@ -460,18 +462,18 @@ builder.Services.AddAuth0ApiAuthentication(options =>
         Audience = builder.Configuration["Auth0:Audience"]
     };
 })
-.WithCustomDomains(customDomainsOptions =>
+.WithCustomDomains(options =>
 {
     // Dynamic domain resolution using request context
-    customDomainsOptions.DomainsResolver = async (httpContext, cancellationToken) =>
+    options.DomainsResolver = async (httpContext, cancellationToken) =>
     {
-        // Example 1: Resolve from header
+        // Example: resolve from a request header
         var tenantId = httpContext.Request.Headers["X-Tenant-Id"].FirstOrDefault();
-        
-        // Example 2: Resolve from database
+
+        // Example: resolve from a database or service
         var tenantService = httpContext.RequestServices.GetRequiredService<ITenantService>();
         var domains = await tenantService.GetAllowedDomainsAsync(tenantId, cancellationToken);
-        
+
         return domains;
     };
 });
@@ -483,33 +485,39 @@ var app = builder.Build();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/api/tenant-data", () => 
+app.MapGet("/api/tenant-data", () =>
     Results.Ok(new { message = "Domain resolved dynamically" }))
     .RequireAuthorization();
 
 app.Run();
-
 ```
 
 **What this does:**
 - Resolves allowed domains dynamically for each request
 - Provides full `HttpContext` access for custom resolution logic
 - Supports database queries, external API calls, or complex business logic
-- Enables true multi-tenant SaaS architectures
 
 **Use this when:**
 - Domains are not known at startup (e.g., customer onboarding creates new tenants)
 - You need request-specific domain resolution (headers, query params, claims)
 - Tenant configuration is stored in a database or external service
-- Building a white-label SaaS with customer-specific Auth0 tenants
+- Building a white-label SaaS with customer-specific Auth0 custom domains
 
-**Important:** `DomainsResolver` and `Domains` are mutually exclusive - configure only one.
+**Important:** `DomainsResolver` and `Domains` are mutually exclusive — configure only one.
 
 ---
 
 ### 4.3 Custom Cache Configuration
 
-Customize the OIDC configuration cache behavior for performance optimization.
+You can control how OpenID Connect configuration managers are cached per domain with `ConfigurationManagerCache`.
+
+By default, the SDK uses an in-memory cache with:
+- `maxSize: 100` entries
+- No expiration (entries remain until evicted by size pressure)
+
+The cache is keyed by the OIDC metadata endpoint URL (e.g., `https://brand-1.custom-domain.com/.well-known/openid-configuration`). Each distinct domain occupies one cache entry.
+
+#### MemoryConfigurationManagerCache (Default)
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
@@ -520,29 +528,28 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddAuth0ApiAuthentication(options =>
 {
-    options.Domain = builder.Configuration["Auth0:Domain"];
     options.JwtBearerOptions = new JwtBearerOptions
     {
         Audience = builder.Configuration["Auth0:Audience"]
     };
 })
-.WithCustomDomains(customDomainsOptions =>
+.WithCustomDomains(options =>
 {
-    customDomainsOptions.Domains = new[]
+    options.Domains = new[]
     {
-        "tenant1.auth0.com",
-        "tenant2.auth0.com"
+        "brand-1.custom-domain.com",
+        "brand-2.custom-domain.com"
     };
-    
+
     // Customize cache settings
-    customDomainsOptions.ConfigurationManagerCache = new MemoryConfigurationManagerCache(
-        maxSize: 50,  // Maximum number of cached configurations
-        slidingExpiration: TimeSpan.FromMinutes(15)  // Cache entry expiration
+    options.ConfigurationManagerCache = new MemoryConfigurationManagerCache(
+        maxSize: 50,                              // Maximum number of cached configurations
+        slidingExpiration: TimeSpan.FromHours(1)  // Evict entries not accessed within 1 hour
     );
-    
+
     // Customize OIDC refresh intervals
-    customDomainsOptions.AutomaticRefreshInterval = TimeSpan.FromHours(24);
-    customDomainsOptions.RefreshInterval = TimeSpan.FromMinutes(10);
+    options.AutomaticRefreshInterval = TimeSpan.FromHours(24);
+    options.RefreshInterval = TimeSpan.FromMinutes(10);
 });
 
 builder.Services.AddAuthorization();
@@ -552,23 +559,72 @@ var app = builder.Build();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/api/cached", () => 
+app.MapGet("/api/data", () =>
     Results.Ok(new { message = "Using custom cache configuration" }))
     .RequireAuthorization();
 
 app.Run();
 ```
 
-**Alternative - Disable Caching:**
+#### NullConfigurationManagerCache
+
+Disables caching entirely — a new configuration manager is created on every request (not recommended for production):
+
 ```csharp
-.WithCustomDomains(customDomainsOptions =>
+.WithCustomDomains(options =>
 {
-    customDomainsOptions.Domains = new[] { "tenant1.auth0.com" };
-    
+    options.Domains = new[] { "brand-1.custom-domain.com" };
+
     // Disable caching entirely (fetch OIDC config on every request)
-    customDomainsOptions.ConfigurationManagerCache = new NullConfigurationManagerCache();
+    options.ConfigurationManagerCache = new NullConfigurationManagerCache();
 });
 ```
+
+#### Custom Cache Implementation
+
+Implement `IConfigurationManagerCache` for custom caching strategies (e.g., a distributed cache):
+
+```csharp
+using Auth0.AspNetCore.Authentication.Api.CustomDomains;
+using Microsoft.IdentityModel.Protocols;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+
+public class MyCustomConfigurationManagerCache : IConfigurationManagerCache
+{
+    public IConfigurationManager<OpenIdConnectConfiguration> GetOrCreate(
+        string metadataAddress,
+        Func<string, IConfigurationManager<OpenIdConnectConfiguration>> factory)
+    {
+        // Return a cached instance or call factory(metadataAddress) to create one
+        throw new NotImplementedException();
+    }
+
+    public void Clear() { /* Evict all entries */ }
+    public void Dispose() { /* Clean up resources */ }
+}
+
+// Usage
+.WithCustomDomains(options =>
+{
+    options.Domains = new[] { "brand-1.custom-domain.com" };
+    options.ConfigurationManagerCache = new MyCustomConfigurationManagerCache();
+});
+```
+
+---
+
+### Security requirements
+
+When configuring the `DomainsResolver`, you are responsible for ensuring that all resolved domains are trusted. Mis-configuring the domain resolver is a critical security risk that can lead to authentication bypass on the relying party (RP) or expose the application to Server-Side Request Forgery (SSRF).
+
+**Single tenant limitation:**
+The `DomainsResolver` is intended solely for multiple custom domains belonging to the same Auth0 tenant. It is not a supported mechanism for connecting multiple Auth0 tenants to a single application.
+
+**Secure proxy requirement:**
+When using MCD, your application must be deployed behind a secure edge or reverse proxy (e.g., Cloudflare, Nginx, or AWS ALB). The proxy must be configured to sanitize and overwrite `Host` and `X-Forwarded-Host` headers before they reach your application.
+
+Without a trusted proxy layer to validate these headers, an attacker can manipulate the domain resolution process. This can result in authentication bypass or exposure to Server-Side Request Forgery (SSRF).
+
 ---
 
 ## Authorization
