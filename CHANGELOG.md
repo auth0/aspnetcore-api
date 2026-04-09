@@ -1,5 +1,13 @@
 # Change Log
 
+## [1.0.0-beta.5](https://github.com/auth0/aspnetcore-api/tree/1.0.0-beta.5) (2026-04-09)
+
+**Added**
+- Adds support for Multiple Custom Domains [\#30](https://github.com/auth0/aspnetcore-api/pull/30) ([kailash-b](https://github.com/kailash-b))
+
+**Security**
+- chore: Dependency updates [\#47](https://github.com/auth0/aspnetcore-api/pull/47) ([kailash-b](https://github.com/kailash-b))
+
 ## [1.0.0-beta.4](https://github.com/auth0/aspnetcore-api/tree/1.0.0-beta.4) (2026-02-26)
 
 **Security**
