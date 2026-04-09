@@ -32,6 +32,16 @@ public abstract class Auth0TestConfiguration
     /// Gets the configuration for the scenario with DPoP in required mode.
     /// </summary>
     public static Auth0Scenario WithDPoPRequired => new Auth0Scenario("DPOP_REQUIRED");
+
+    /// <summary>
+    /// Gets the configuration for custom domain 1.
+    /// </summary>
+    public static Auth0Scenario CustomDomain1 => new Auth0Scenario("CUSTOM_DOMAIN_1");
+
+    /// <summary>
+    /// Gets the configuration for custom domain 2.
+    /// </summary>
+    public static Auth0Scenario CustomDomain2 => new Auth0Scenario("CUSTOM_DOMAIN_2");
 }
 
 /// <summary>

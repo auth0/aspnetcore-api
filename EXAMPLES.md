@@ -4,34 +4,39 @@ This document provides practical, copy-pastable code examples for common scenari
 
 ## Table of Contents
 
-- [Getting Started](#getting-started)
-  - [Basic JWT Authentication](#1-basic-jwt-authentication)
-  - [Protecting Minimal API Endpoints](#2-protecting-minimal-api-endpoints)
-  - [Protecting Controller Endpoints](#3-protecting-controller-endpoints)
-- [Configuration](#configuration)
-  - [Custom Token Validation Parameters](#4-custom-token-validation-parameters)
-- [DPoP (Demonstration of Proof-of-Possession)](#dpop-demonstration-of-proof-of-possession)
-  - [Enabling DPoP with Default Settings](#5-enabling-dpop-with-default-settings)
-  - [DPoP in Allowed Mode (Gradual Adoption)](#6-dpop-in-allowed-mode-gradual-adoption)
-  - [DPoP in Required Mode (Strict Security)](#7-dpop-in-required-mode-strict-security)
-- [Authorization](#authorization)
-  - [Scope-Based Authorization with Policies](#8-scope-based-authorization-with-policies)
-  - [Permission-Based Authorization](#9-permission-based-authorization)
-  - [Custom Authorization Handler](#10-custom-authorization-handler)
-  - [Role-Based Authorization](#11-role-based-authorization)
-- [Advanced Scenarios](#advanced-scenarios)
-  - [Accessing User Claims](#12-accessing-user-claims)
-  - [Custom JWT Bearer Events](#13-custom-jwt-bearer-events)
-  - [Token Extraction from Query String](#14-token-extraction-from-query-string)
-  - [Custom Error Responses](#15-custom-error-responses)
-- [Integration Examples](#integration-examples)
-  - [SignalR Integration](#16-signalr-integration)
+1. **Getting Started**
+   - 1.1 [Basic JWT Authentication](#11-basic-jwt-authentication)
+   - 1.2 [Protecting Minimal API Endpoints](#12-protecting-minimal-api-endpoints)
+   - 1.3 [Protecting Controller Endpoints](#13-protecting-controller-endpoints)
+2. **Configuration**
+   - 2.1 [Custom Token Validation Parameters](#21-custom-token-validation-parameters)
+3. **DPoP (Demonstration of Proof-of-Possession)**
+   - 3.1 [Enabling DPoP with Default Settings](#31-enabling-dpop-with-default-settings)
+   - 3.2 [DPoP in Allowed Mode (Gradual Adoption)](#32-dpop-in-allowed-mode-gradual-adoption)
+   - 3.3 [DPoP in Required Mode (Strict Security)](#33-dpop-in-required-mode-strict-security)
+4. **Multiple Custom Domains**
+   - 4.1 [Basic Custom Domains Configuration](#41-basic-custom-domains-configuration)
+   - 4.2 [Dynamic Domain Resolution](#42-dynamic-domain-resolution)
+   - 4.3 [Custom Cache Configuration](#43-custom-cache-configuration)
+   - [Security requirements](#security-requirements)
+5. **Authorization**
+   - 5.1 [Scope-Based Authorization with Policies](#51-scope-based-authorization-with-policies)
+   - 5.2 [Permission-Based Authorization](#52-permission-based-authorization)
+   - 5.3 [Custom Authorization Handler](#53-custom-authorization-handler)
+   - 5.4 [Role-Based Authorization](#54-role-based-authorization)
+6. **Advanced Scenarios**
+   - 6.1 [Accessing User Claims](#61-accessing-user-claims)
+   - 6.2 [Custom JWT Bearer Events](#62-custom-jwt-bearer-events)
+   - 6.3 [Token Extraction from Query String](#63-token-extraction-from-query-string)
+   - 6.4 [Custom Error Responses](#64-custom-error-responses)
+7. **Integration Examples**
+   - 7.1 [SignalR Integration](#71-signalr-integration)
 
 ---
 
 ## Getting Started
 
-### 1. Basic JWT Authentication
+### 1.1 Basic JWT Authentication
 
 Basic setup for Auth0 JWT authentication in a minimal API.
 
@@ -65,7 +70,7 @@ app.Run();
 
 ---
 
-### 2. Protecting Minimal API Endpoints
+### 1.2 Protecting Minimal API Endpoints
 
 Protect endpoints using `RequireAuthorization()` in minimal APIs.
 
@@ -113,7 +118,7 @@ app.Run();
 
 ---
 
-### 3. Protecting Controller Endpoints
+### 1.3 Protecting Controller Endpoints
 
 Protect endpoints using `[Authorize]` attribute in controllers.
 
@@ -181,7 +186,7 @@ public record DataModel(int Id, string Name);
 
 ## Configuration
 
-### 4. Custom Token Validation Parameters
+### 2.1 Custom Token Validation Parameters
 
 Customize JWT token validation with specific parameters.
 
@@ -233,7 +238,7 @@ app.Run();
 
 DPoP is a security mechanism that binds access tokens to cryptographic keys, preventing token theft and replay attacks. This SDK provides seamless DPoP integration with flexible enforcement modes.
 
-### 5. Enabling DPoP with Default Settings
+### 3.1 Enabling DPoP with Default Settings
 
 Enable DPoP with a single method call - accepts both DPoP and Bearer tokens.
 
@@ -276,7 +281,7 @@ app.Run();
 
 ---
 
-### 6. DPoP in Allowed Mode (Gradual Adoption)
+### 3.2 DPoP in Allowed Mode (Gradual Adoption)
 
 Use Allowed mode to gradually adopt DPoP without breaking existing clients using Bearer tokens.
 
@@ -332,7 +337,7 @@ app.Run();
 
 ---
 
-### 7. DPoP in Required Mode (Strict Security)
+### 3.3 DPoP in Required Mode (Strict Security)
 
 Use Required mode when you want maximum security - only DPoP tokens are accepted.
 
@@ -374,9 +379,257 @@ app.Run();
 
 ---
 
+## Multiple Custom Domains
+
+Multiple Custom Domains (MCD) lets you accept tokens from multiple Auth0 custom domains while keeping a single SDK instance. This is useful when one application serves multiple custom domains, each mapped to a different Auth0 custom domain.
+
+MCD is intended for the custom domains of a single Auth0 tenant. It is not a supported way to connect multiple Auth0 tenants to one application.
+
+### 4.1 Basic Custom Domains Configuration
+
+Configure a static list of allowed Auth0 custom domains when they are known at application startup.
+
+```csharp
+using Auth0.AspNetCore.Authentication.Api;
+using Auth0.AspNetCore.Authentication.Api.CustomDomains;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuth0ApiAuthentication(options =>
+{
+    options.JwtBearerOptions = new JwtBearerOptions
+    {
+        Audience = builder.Configuration["Auth0:Audience"]
+    };
+})
+.WithCustomDomains(options =>
+{
+    // Static list of allowed Auth0 custom domains
+    options.Domains = new[]
+    {
+        "brand-1.custom-domain.com",
+        "brand-2.custom-domain.com",
+        "brand-3.custom-domain.com"
+    };
+});
+
+builder.Services.AddAuthorization();
+
+var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+// This endpoint accepts tokens from any of the configured domains
+app.MapGet("/api/data", () =>
+    Results.Ok(new { message = "Authenticated from any allowed domain" }))
+    .RequireAuthorization();
+
+app.Run();
+```
+
+**What this does:**
+- Accepts JWT tokens issued by any domain in the `Domains` list
+- Automatically validates token issuer against the allowed list before any network calls
+- Rejects tokens from unauthorized domains with 401 Unauthorized
+- Uses in-memory cache for OIDC configurations (100 entries, 10-minute sliding expiration by default)
+
+**Use this when:**
+- You have a fixed set of Auth0 custom domains known at application startup
+- You need simple, straightforward multi-domain configuration
+
+---
+
+### 4.2 Dynamic Domain Resolution
+
+Resolve allowed domains dynamically at runtime based on request context, database lookups, or external APIs.
+
+```csharp
+using Auth0.AspNetCore.Authentication.Api;
+using Auth0.AspNetCore.Authentication.Api.CustomDomains;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Register a tenant service for domain resolution
+builder.Services.AddSingleton<ITenantService, TenantService>();
+
+builder.Services.AddAuth0ApiAuthentication(options =>
+{
+    options.JwtBearerOptions = new JwtBearerOptions
+    {
+        Audience = builder.Configuration["Auth0:Audience"]
+    };
+})
+.WithCustomDomains(options =>
+{
+    // Dynamic domain resolution using request context
+    options.DomainsResolver = async (httpContext, cancellationToken) =>
+    {
+        // Example: resolve from a request header
+        var tenantId = httpContext.Request.Headers["X-Tenant-Id"].FirstOrDefault();
+
+        // Example: resolve from a database or service
+        var tenantService = httpContext.RequestServices.GetRequiredService<ITenantService>();
+        var domains = await tenantService.GetAllowedDomainsAsync(tenantId, cancellationToken);
+
+        return domains;
+    };
+});
+
+builder.Services.AddAuthorization();
+
+var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapGet("/api/tenant-data", () =>
+    Results.Ok(new { message = "Domain resolved dynamically" }))
+    .RequireAuthorization();
+
+app.Run();
+```
+
+**What this does:**
+- Resolves allowed domains dynamically for each request
+- Provides full `HttpContext` access for custom resolution logic
+- Supports database queries, external API calls, or complex business logic
+
+**Use this when:**
+- Domains are not known at startup (e.g., customer onboarding creates new tenants)
+- You need request-specific domain resolution (headers, query params, claims)
+- Tenant configuration is stored in a database or external service
+- Building a white-label SaaS with customer-specific Auth0 custom domains
+
+**Important:** `DomainsResolver` and `Domains` are mutually exclusive — configure only one.
+
+---
+
+### 4.3 Custom Cache Configuration
+
+You can control how OpenID Connect configuration managers are cached per domain with `ConfigurationManagerCache`.
+
+By default, the SDK uses an in-memory cache with:
+- `maxSize: 100` entries
+- No expiration (entries remain until evicted by size pressure)
+
+The cache is keyed by the OIDC metadata endpoint URL (e.g., `https://brand-1.custom-domain.com/.well-known/openid-configuration`). Each distinct domain occupies one cache entry.
+
+#### MemoryConfigurationManagerCache (Default)
+
+```csharp
+using Auth0.AspNetCore.Authentication.Api;
+using Auth0.AspNetCore.Authentication.Api.CustomDomains;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuth0ApiAuthentication(options =>
+{
+    options.JwtBearerOptions = new JwtBearerOptions
+    {
+        Audience = builder.Configuration["Auth0:Audience"]
+    };
+})
+.WithCustomDomains(options =>
+{
+    options.Domains = new[]
+    {
+        "brand-1.custom-domain.com",
+        "brand-2.custom-domain.com"
+    };
+
+    // Customize cache settings
+    options.ConfigurationManagerCache = new MemoryConfigurationManagerCache(
+        maxSize: 50,                              // Maximum number of cached configurations
+        slidingExpiration: TimeSpan.FromHours(1)  // Evict entries not accessed within 1 hour
+    );
+
+    // Customize OIDC refresh intervals
+    options.AutomaticRefreshInterval = TimeSpan.FromHours(24);
+    options.RefreshInterval = TimeSpan.FromMinutes(10);
+});
+
+builder.Services.AddAuthorization();
+
+var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapGet("/api/data", () =>
+    Results.Ok(new { message = "Using custom cache configuration" }))
+    .RequireAuthorization();
+
+app.Run();
+```
+
+#### NullConfigurationManagerCache
+
+Disables caching entirely — a new configuration manager is created on every request (not recommended for production):
+
+```csharp
+.WithCustomDomains(options =>
+{
+    options.Domains = new[] { "brand-1.custom-domain.com" };
+
+    // Disable caching entirely (fetch OIDC config on every request)
+    options.ConfigurationManagerCache = new NullConfigurationManagerCache();
+});
+```
+
+#### Custom Cache Implementation
+
+Implement `IConfigurationManagerCache` for custom caching strategies (e.g., a distributed cache):
+
+```csharp
+using Auth0.AspNetCore.Authentication.Api.CustomDomains;
+using Microsoft.IdentityModel.Protocols;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+
+public class MyCustomConfigurationManagerCache : IConfigurationManagerCache
+{
+    public IConfigurationManager<OpenIdConnectConfiguration> GetOrCreate(
+        string metadataAddress,
+        Func<string, IConfigurationManager<OpenIdConnectConfiguration>> factory)
+    {
+        // Return a cached instance or call factory(metadataAddress) to create one
+        throw new NotImplementedException();
+    }
+
+    public void Clear() { /* Evict all entries */ }
+    public void Dispose() { /* Clean up resources */ }
+}
+
+// Usage
+.WithCustomDomains(options =>
+{
+    options.Domains = new[] { "brand-1.custom-domain.com" };
+    options.ConfigurationManagerCache = new MyCustomConfigurationManagerCache();
+});
+```
+
+---
+
+### Security requirements
+
+When configuring the `DomainsResolver`, you are responsible for ensuring that all resolved domains are trusted. Mis-configuring the domain resolver is a critical security risk that can lead to authentication bypass on the relying party (RP) or expose the application to Server-Side Request Forgery (SSRF).
+
+**Single tenant limitation:**
+The `DomainsResolver` is intended solely for multiple custom domains belonging to the same Auth0 tenant. It is not a supported mechanism for connecting multiple Auth0 tenants to a single application.
+
+**Secure proxy requirement:**
+When using MCD, your application must be deployed behind a secure edge or reverse proxy (e.g., Cloudflare, Nginx, or AWS ALB). The proxy must be configured to sanitize and overwrite `Host` and `X-Forwarded-Host` headers before they reach your application.
+
+Without a trusted proxy layer to validate these headers, an attacker can manipulate the domain resolution process. This can result in authentication bypass or exposure to Server-Side Request Forgery (SSRF).
+
+---
+
 ## Authorization
 
-### 8. Scope-Based Authorization with Policies
+### 5.1 Scope-Based Authorization with Policies
 
 Validate scopes from Auth0 access tokens using authorization policies.
 
@@ -464,7 +717,7 @@ public record ProductModel(int Id, string Name);
 
 ---
 
-### 9. Permission-Based Authorization
+### 5.2 Permission-Based Authorization
 
 Validate Auth0 permissions using custom authorization policies.
 
@@ -540,7 +793,7 @@ public record UserModel(string Id, string Name, string Email);
 
 ---
 
-### 10. Custom Authorization Handler
+### 5.3 Custom Authorization Handler
 
 Create a reusable authorization handler for scope validation.
 
@@ -640,7 +893,7 @@ public record InventoryItem(int Id, string Name, int Quantity);
 
 ---
 
-### 11. Role-Based Authorization
+### 5.4 Role-Based Authorization
 
 Validate Auth0 roles using authorization policies.
 
@@ -709,7 +962,7 @@ public class AdminController : ControllerBase
 
 ## Advanced Scenarios
 
-### 12. Accessing User Claims
+### 6.1 Accessing User Claims
 
 Access and use user claims from Auth0 tokens.
 
@@ -759,7 +1012,7 @@ app.Run();
 
 ---
 
-### 13. Custom JWT Bearer Events
+### 6.2 Custom JWT Bearer Events
 
 Implement custom logic during JWT authentication events.
 
@@ -852,7 +1105,7 @@ app.Run();
 
 ---
 
-### 14. Token Extraction from Query String
+### 6.3 Token Extraction from Query String
 
 Extract JWT tokens from query string for scenarios like SignalR.
 
@@ -913,7 +1166,7 @@ app.Run();
 
 ---
 
-### 15. Custom Error Responses
+### 6.4 Custom Error Responses
 
 Customize error responses for authentication failures.
 
@@ -986,7 +1239,7 @@ app.Run();
 
 ## Integration Examples
 
-### 16. SignalR Integration
+### 7.1 SignalR Integration
 
 Integrate Auth0 authentication with SignalR hubs.
 

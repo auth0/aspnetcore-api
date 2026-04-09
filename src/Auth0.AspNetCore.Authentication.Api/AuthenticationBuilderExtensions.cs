@@ -1,10 +1,12 @@
 using System.Runtime.CompilerServices;
 
+using Auth0.AspNetCore.Authentication.Api.CustomDomains;
 using Auth0.AspNetCore.Authentication.Api.DPoP;
 using Auth0.AspNetCore.Authentication.Api.DPoP.EventHandlers;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -179,14 +181,82 @@ public static class AuthenticationBuilderExtensions
         var dPoPOptions = new DPoPOptions();
         configureDPoPOptions(dPoPOptions);
 
-        builder.Services.Configure<JwtBearerOptions>(builder.AuthenticationScheme,
-            jwtBearerOptions => { jwtBearerOptions.Events = DPoPEventsFactory.Create(builder.Options); });
-
         builder.Services.TryAddSingleton(dPoPOptions);
         builder.Services.TryAddScoped<IDPoPProofValidationService, DPoPProofValidationService>();
-        builder.Services.TryAddScoped<MessageReceivedHandler>();
+        builder.Services.TryAddScoped<DPoP.EventHandlers.MessageReceivedHandler>();
         builder.Services.TryAddScoped<TokenValidationHandler>();
         builder.Services.TryAddScoped<ChallengeHandler>();
+
+        // Configure DPoP events - reads current state from builder.Options and chains properly
+        builder.Services.Configure<JwtBearerOptions>(builder.AuthenticationScheme,
+            jwtBearerOptions =>
+            {
+                // Update Auth0Options to reflect current state for DPoPEventsFactory
+                builder.Options.JwtBearerOptions ??= new JwtBearerOptions();
+                builder.Options.JwtBearerOptions.Events = jwtBearerOptions.Events;
+
+                jwtBearerOptions.Events = DPoPEventsFactory.Create(builder.Options);
+            });
+
+        return builder;
+    }
+
+    /// <summary>
+    ///     Configures custom domains options for Auth0 API authentication.
+    /// </summary>
+    /// <param name="builder">
+    ///     The <see cref="Auth0ApiAuthenticationBuilder" /> instance to configure.
+    /// </param>
+    /// <param name="configureOptions">
+    ///     A delegate to configure the <see cref="Auth0CustomDomainsOptions" /> for custom domains integration.
+    /// </param>
+    /// <returns>
+    ///     The configured <see cref="Auth0ApiAuthenticationBuilder" /> instance.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    ///     Thrown when <paramref name="builder" /> is null.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    ///     Thrown when custom domains configuration is invalid.
+    /// </exception>
+    public static Auth0ApiAuthenticationBuilder WithCustomDomains(
+        this Auth0ApiAuthenticationBuilder builder,
+        Action<Auth0CustomDomainsOptions>? configureOptions = null)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        var options = new Auth0CustomDomainsOptions();
+        configureOptions?.Invoke(options);
+
+        ValidateCustomDomainsOptions(options);
+
+        // Use default cache if none specified
+        options.ConfigurationManagerCache ??= new MemoryConfigurationManagerCache(slidingExpiration: TimeSpan.FromMinutes(10));
+
+        builder.Services.AddSingleton(options);
+        builder.Services.AddSingleton(options.ConfigurationManagerCache);
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddHttpClient();
+
+        builder.Services.TryAddSingleton<Auth0CustomDomainsConfigurationManager>();
+
+        // Register event handler for OnMessageReceived validation
+        builder.Services.TryAddScoped<CustomDomains.EventHandlers.MessageReceivedHandler>();
+
+        // Configure CustomDomains events - reads current state and chains properly
+        builder.Services.Configure<JwtBearerOptions>(builder.AuthenticationScheme, jwtBearerOptions =>
+        {
+            jwtBearerOptions.Events = CustomDomainsEventsFactory.Create(jwtBearerOptions);
+        });
+
+        // Register IPostConfigureOptions for setting ConfigurationManager.
+        // Uses AddSingleton with a factory so the scheme name is captured and only the matching scheme is configured.
+        // TryAddEnumerable cannot be used with factory registrations as it requires a concrete implementation type.
+        builder.Services.AddSingleton<IPostConfigureOptions<JwtBearerOptions>>(sp =>
+            new Auth0CustomDomainsPostConfigureOptions(
+                sp.GetRequiredService<Auth0CustomDomainsConfigurationManager>(),
+                builder.AuthenticationScheme));
+
         return builder;
     }
 
@@ -249,6 +319,80 @@ public static class AuthenticationBuilderExtensions
         {
             throw new InvalidOperationException(
                 "Auth0 Audience is required. Please set the Audience property in Auth0ApiOptions.");
+        }
+    }
+
+    /// <summary>
+    ///     Validates the custom domains configuration options.
+    /// </summary>
+    /// <param name="options">The <see cref="Auth0CustomDomainsOptions" /> to validate.</param>
+    /// <exception cref="InvalidOperationException">Thrown when custom domains configuration is invalid.</exception>
+    private static void ValidateCustomDomainsOptions(Auth0CustomDomainsOptions options)
+    {
+        // Mutually exclusive check
+        if (options.Domains?.Count > 0 && options.DomainsResolver != null)
+        {
+            throw new InvalidOperationException(
+                "Cannot configure both Domains and DomainsResolver. Choose one approach.");
+        }
+
+        // At least one must be configured when using custom domains
+        if ((options.Domains == null || options.Domains.Count == 0) && options.DomainsResolver == null)
+        {
+            throw new InvalidOperationException(
+                "When using .WithCustomDomains(), you must configure either Domains or DomainsResolver.");
+        }
+
+        // Validate domain formats in Domains list
+        if (options.Domains != null)
+        {
+            foreach (var domain in options.Domains)
+            {
+                if (string.IsNullOrWhiteSpace(domain))
+                {
+                    throw new InvalidOperationException(
+                        "Domains list contains null or empty entries.");
+                }
+
+                var domainTrimmed = domain.TrimEnd('/');
+
+                // Determine the hostname portion to validate
+                // BuildIssuerUrl supports bare hostnames, https://, and http:// (for testing/localhost)
+                string hostname;
+                if (domainTrimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    hostname = domainTrimmed[8..];
+                }
+                else if (domainTrimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                {
+                    hostname = domainTrimmed[7..];
+                }
+                else
+                {
+                    hostname = domainTrimmed;
+                }
+
+                if (!Uri.TryCreate($"https://{hostname}", UriKind.Absolute, out Uri? uri)
+                    || uri.Host != hostname
+                    || uri.PathAndQuery != "/")
+                {
+                    throw new InvalidOperationException(
+                        $"Invalid domain format: '{domain}'. Must be a plain hostname (e.g. 'tenant.auth0.com').");
+                }
+            }
+        }
+
+        // Validate intervals
+        if (options.AutomaticRefreshInterval <= TimeSpan.Zero)
+        {
+            throw new InvalidOperationException(
+                "AutomaticRefreshInterval must be greater than zero.");
+        }
+
+        if (options.RefreshInterval <= TimeSpan.Zero)
+        {
+            throw new InvalidOperationException(
+                "RefreshInterval must be greater than zero.");
         }
     }
 }

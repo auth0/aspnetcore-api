@@ -44,6 +44,14 @@ jobs:
           DPOP_REQUIRED_CLIENT_ID: ${{ secrets.DPOP_REQUIRED_CLIENT_ID }}
           DPOP_REQUIRED_CLIENT_SECRET: ${{ secrets.DPOP_REQUIRED_CLIENT_SECRET }}
           DPOP_REQUIRED_DPOP_MODE: ${{ secrets.DPOP_REQUIRED_DPOP_MODE }}
+          CUSTOM_DOMAIN_1_DOMAIN: ${{ secrets.CUSTOM_DOMAIN_1_DOMAIN}}
+          CUSTOM_DOMAIN_1_AUDIENCE: ${{ secrets.CUSTOM_DOMAIN_1_AUDIENCE}}
+          CUSTOM_DOMAIN_1_CLIENT_ID: ${{ secrets.CUSTOM_DOMAIN_1_CLIENT_ID}}
+          CUSTOM_DOMAIN_1_CLIENT_SECRET: ${{ secrets.CUSTOM_DOMAIN_1_CLIENT_SECRET}}
+          CUSTOM_DOMAIN_2_DOMAIN: ${{ secrets.CUSTOM_DOMAIN_2_DOMAIN}}
+          CUSTOM_DOMAIN_2_AUDIENCE: ${{ secrets.CUSTOM_DOMAIN_2_AUDIENCE}}
+          CUSTOM_DOMAIN_2_CLIENT_ID: ${{ secrets.CUSTOM_DOMAIN_2_CLIENT_ID}}
+          CUSTOM_DOMAIN_2_CLIENT_SECRET: ${{ secrets.CUSTOM_DOMAIN_2_CLIENT_SECRET}}
         run: dotnet test tests/Auth0.AspNetCore.Authentication.Api.IntegrationTests/Auth0.AspNetCore.Authentication.Api.IntegrationTests.csproj --collect:"XPlat Code coverage" --results-directory ./TestResults/ /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura
 
       - name: Update codecov report
