@@ -4,17 +4,36 @@ This guide covers all configuration options available in the Auth0 ASP.NET Core 
 
 ## Basic Configuration
 
-The most basic configuration requires only two settings:
+The most basic configuration requires only two settings — `Domain` and `Audience` — which can be bound directly from your configuration:
+
+```csharp
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"));
+```
+
+Or configure programmatically using a delegate:
 
 ```csharp
 builder.Services.AddAuth0ApiAuthentication(options =>
 {
     options.Domain = "your-tenant.auth0.com";
-    options.JwtBearerOptions = new JwtBearerOptions()
-    {
-        Audience = "https://your-api-identifier"
-    };
+    options.Audience = "https://your-api-identifier";
 });
+```
+
+Both approaches also accept an optional `configureJwtBearer` parameter for advanced JWT Bearer customization:
+
+```csharp
+builder.Services.AddAuth0ApiAuthentication(
+    options =>
+    {
+        options.Domain = "your-tenant.auth0.com";
+        options.Audience = "https://your-api-identifier";
+    },
+    configureJwtBearer: jwt =>
+    {
+        jwt.SaveToken = true;
+    });
 ```
 
 ## Configuration Options
@@ -24,9 +43,25 @@ builder.Services.AddAuth0ApiAuthentication(options =>
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
 | `Domain` | string | Yes | Your Auth0 tenant domain (e.g., "your-tenant.auth0.com") |
-| `JwtBearerOptions` | JwtBearerOptions | Yes | Standard JWT Bearer options with Auth0 configurations |
+| `Audience` | string | Yes | The API identifier registered in Auth0 |
 
-### JwtBearerOptions
+### Customizing JwtBearerOptions
+
+For advanced JWT Bearer configuration, use the `configureJwtBearer` parameter:
+
+```csharp
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
+    {
+        jwt.RequireHttpsMetadata = true;
+        jwt.SaveToken = true;
+        jwt.TokenValidationParameters = new TokenValidationParameters
+        {
+            ClockSkew = TimeSpan.FromMinutes(5)
+        };
+    });
+```
 
 The library exposes all standard `JwtBearerOptions` properties from ASP.NET Core. For a complete list of available options and their descriptions, refer to the [Microsoft JwtBearerOptions API documentation](https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.authentication.jwtbearer.jwtbeareroptions).
 
@@ -34,14 +69,17 @@ The library exposes all standard `JwtBearerOptions` properties from ASP.NET Core
 
 ### Using Configuration Files
 
-**appsettings.json** (shared settings):
+**appsettings.json** (shared settings — both Domain and Audience required at runtime):
 ```json
 {
   "Auth0": {
+    "Domain": "your-tenant.auth0.com",
     "Audience": "https://your-api-identifier"
   }
 }
 ```
+
+You can override values per environment. For example, if the API identifier stays the same across environments but the tenant differs:
 
 **appsettings.Development.json**:
 ```json
@@ -61,23 +99,18 @@ The library exposes all standard `JwtBearerOptions` properties from ASP.NET Core
 }
 ```
 
+> **Note:** The .NET configuration system merges files in order, so environment-specific files override values from the base `appsettings.json`. Both `Domain` and `Audience` must resolve to non-empty values at startup or the application will fail with a validation error.
+
 ### Using Environment Variables
+
+Environment variables are automatically bound via the .NET configuration system:
 
 ```bash
 export Auth0__Domain="your-tenant.auth0.com"
 export Auth0__Audience="https://your-api-identifier"
 ```
 
-```csharp
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions()
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-});
-```
+No code changes needed — the `GetSection("Auth0")` call picks up values from all configured providers (appsettings.json, environment variables, user secrets, etc.).
 
 ## Next Steps
 

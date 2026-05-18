@@ -42,15 +42,9 @@ using Auth0.AspNetCore.Authentication.Api;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add Auth0 API Authentication
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions()
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-});
+// Add Auth0 API Authentication — binds Domain and Audience from appsettings.json
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"));
 
 // Add other services
 builder.Services.AddControllers();

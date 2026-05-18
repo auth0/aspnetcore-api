@@ -19,18 +19,12 @@ Add `.WithDPoP()` to your authentication configuration:
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions()
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-}).WithDPoP(); // ✨ Enable DPoP with default settings
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"))
+    .WithDPoP(); // ✨ Enable DPoP with default settings
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
@@ -120,19 +114,14 @@ curl -X GET https://localhost:5001/api/protected \
 Start with Allowed mode to test DPoP without breaking existing clients:
 
 ```csharp
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions()
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"))
+    .WithDPoP(options =>
     {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-}).WithDPoP(options =>
-{
-    options.Mode = DPoPModes.Allowed;
-    options.Leeway = 30; // 30 seconds tolerance
-    options.IatOffset = 300; // 5 minutes max age
-});
+        options.Mode = DPoPModes.Allowed;
+        options.Leeway = 30; // 30 seconds tolerance
+        options.IatOffset = 300; // 5 minutes max age
+    });
 ```
 
 ### Example 2: Required Mode
@@ -140,19 +129,14 @@ builder.Services.AddAuth0ApiAuthentication(options =>
 Enforce DPoP for all requests:
 
 ```csharp
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions()
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"))
+    .WithDPoP(options =>
     {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-}).WithDPoP(options =>
-{
-    options.Mode = DPoPModes.Required;
-    options.Leeway = 10; // Tighter timing
-    options.IatOffset = 120; // 2 minutes max age
-});
+        options.Mode = DPoPModes.Required;
+        options.Leeway = 10; // Tighter timing
+        options.IatOffset = 120; // 2 minutes max age
+    });
 ```
 
 ### Example 3: Custom Authentication Scheme
@@ -160,17 +144,10 @@ builder.Services.AddAuth0ApiAuthentication(options =>
 Use a custom scheme name:
 
 ```csharp
-builder.Services
-    .AddAuthentication("MyCustomScheme")
-    .AddAuth0ApiAuthentication("MyCustomScheme", options =>
-    {
-        options.Domain = builder.Configuration["Auth0:Domain"];
-        options.JwtBearerOptions = new JwtBearerOptions()
-        {
-            Audience = builder.Configuration["Auth0:Audience"]
-        };
-    })
-    .WithDPoP("MyCustomScheme", options =>
+builder.Services.AddAuth0ApiAuthentication(
+    "MyCustomScheme",
+    builder.Configuration.GetSection("Auth0"))
+    .WithDPoP(options =>
     {
         options.Mode = DPoPModes.Allowed;
     });

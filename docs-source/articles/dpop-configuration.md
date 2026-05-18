@@ -18,14 +18,9 @@ This guide provides comprehensive documentation for all DPoP configuration optio
 Enable DPoP with default settings:
 
 ```csharp
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions()
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-}).WithDPoP();
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"))
+    .WithDPoP();
 ```
 
 ### Configuration with Options
@@ -33,19 +28,14 @@ builder.Services.AddAuth0ApiAuthentication(options =>
 Customize DPoP behavior:
 
 ```csharp
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions()
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"))
+    .WithDPoP(options =>
     {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-}).WithDPoP(options =>
-{
-    options.Mode = DPoPModes.Required;
-    options.IatOffset = 300;
-    options.Leeway = 30;
-});
+        options.Mode = DPoPModes.Required;
+        options.IatOffset = 300;
+        options.Leeway = 30;
+    });
 ```
 
 ## DPoPOptions Properties
