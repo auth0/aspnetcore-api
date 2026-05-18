@@ -9,6 +9,8 @@ namespace Auth0.AspNetCore.Authentication.Api;
 ///     have been applied. This correctly handles both the single-audience case (via
 ///     <see cref="Auth0ApiOptions.Audience" /> or <see cref="JwtBearerOptions.Audience" />) and
 ///     the multi-audience case (via <see cref="Microsoft.IdentityModel.Tokens.TokenValidationParameters.ValidAudiences" />).
+///     Also validates that EventsType is not set, as it would bypass the SDK's event handler chain
+///     (DPoP, custom domains, etc.) at runtime.
 /// </summary>
 internal class Auth0JwtBearerOptionsValidator : IValidateOptions<JwtBearerOptions>
 {
@@ -24,6 +26,18 @@ internal class Auth0JwtBearerOptionsValidator : IValidateOptions<JwtBearerOption
         if (!string.Equals(name, _authenticationScheme, StringComparison.Ordinal))
         {
             return ValidateOptionsResult.Skip;
+        }
+
+        // EventsType takes precedence over Events at runtime in ASP.NET Core's AuthenticationHandler.
+        // If set, it would silently bypass the SDK's event handler chain (DPoP validation,
+        // custom domains, JwtBearerEventsFactory wrapping), which is a security concern.
+        if (options.EventsType != null)
+        {
+            return ValidateOptionsResult.Fail(
+                $"JwtBearerOptions.EventsType must not be set when using Auth0 API authentication. " +
+                $"EventsType takes precedence over Events at runtime, which would bypass the SDK's " +
+                $"event handler chain (including DPoP validation and custom domains). " +
+                $"Use the 'configureJwtBearer' callback to configure event handlers via jwt.Events instead.");
         }
 
         var hasAudience = !string.IsNullOrWhiteSpace(options.Audience);

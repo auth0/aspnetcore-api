@@ -63,6 +63,90 @@ public class AuthenticationBuilderExtensionsTest
         result.Succeeded.Should().BeTrue();
     }
 
+    [Theory]
+    [InlineData("https://tenant.auth0.com")]
+    [InlineData("http://tenant.auth0.com")]
+    [InlineData("HTTPS://tenant.auth0.com")]
+    public void Auth0ApiOptionsValidator_ShouldFail_When_Domain_Contains_Scheme(string domain)
+    {
+        var validator = new Auth0ApiOptionsValidator();
+        var options = new Auth0ApiOptions { Domain = domain };
+
+        ValidateOptionsResult result = validator.Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle(f => f.Contains("hostname only"));
+    }
+
+    [Theory]
+    [InlineData("tenant.auth0.com/path")]
+    [InlineData("tenant.auth0.com/some/path")]
+    public void Auth0ApiOptionsValidator_ShouldFail_When_Domain_Contains_Path(string domain)
+    {
+        var validator = new Auth0ApiOptionsValidator();
+        var options = new Auth0ApiOptions { Domain = domain };
+
+        ValidateOptionsResult result = validator.Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle(f => f.Contains("hostname only"));
+    }
+
+    [Theory]
+    [InlineData("tenant.auth0.com:443")]
+    [InlineData("tenant.auth0.com:8080")]
+    public void Auth0ApiOptionsValidator_ShouldFail_When_Domain_Contains_Port(string domain)
+    {
+        var validator = new Auth0ApiOptionsValidator();
+        var options = new Auth0ApiOptions { Domain = domain };
+
+        ValidateOptionsResult result = validator.Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle(f => f.Contains("port"));
+    }
+
+    [Theory]
+    [InlineData("tenant.auth0.com?q=1")]
+    [InlineData("tenant.auth0.com#fragment")]
+    public void Auth0ApiOptionsValidator_ShouldFail_When_Domain_Contains_QueryOrFragment(string domain)
+    {
+        var validator = new Auth0ApiOptionsValidator();
+        var options = new Auth0ApiOptions { Domain = domain };
+
+        ValidateOptionsResult result = validator.Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle(f => f.Contains("hostname only"));
+    }
+
+    [Theory]
+    [InlineData("tenant auth0.com")]
+    [InlineData("tenant\tauth0.com")]
+    public void Auth0ApiOptionsValidator_ShouldFail_When_Domain_Contains_Whitespace(string domain)
+    {
+        var validator = new Auth0ApiOptionsValidator();
+        var options = new Auth0ApiOptions { Domain = domain };
+
+        ValidateOptionsResult result = validator.Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("tenant.us.auth0.com")]
+    [InlineData("my-tenant.auth0.com")]
+    [InlineData("example.com")]
+    public void Auth0ApiOptionsValidator_ShouldSucceed_For_Valid_Domain(string domain)
+    {
+        var validator = new Auth0ApiOptionsValidator();
+        var options = new Auth0ApiOptions { Domain = domain };
+
+        ValidateOptionsResult result = validator.Validate(null, options);
+
+        result.Succeeded.Should().BeTrue();
+    }
+
     #endregion
 
     #region Auth0JwtBearerOptionsValidatorTests
@@ -119,6 +203,24 @@ public class AuthenticationBuilderExtensionsTest
         ValidateOptionsResult result = validator.Validate("SomeOtherScheme", options);
 
         result.Skipped.Should().BeTrue();
+    }
+
+    [Fact]
+    public void JwtBearerOptionsValidator_ShouldFail_When_EventsType_Is_Set()
+    {
+        // EventsType takes precedence over Events at runtime in ASP.NET Core,
+        // which would silently bypass the SDK's event handler chain (DPoP, custom domains).
+        var validator = new Auth0JwtBearerOptionsValidator("Auth0");
+        var options = new JwtBearerOptions
+        {
+            Audience = "https://api.example.com",
+            EventsType = typeof(JwtBearerEvents)
+        };
+
+        ValidateOptionsResult result = validator.Validate("Auth0", options);
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle(f => f.Contains("EventsType"));
     }
 
     #endregion
