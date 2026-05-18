@@ -5,27 +5,39 @@ namespace Auth0.AspNetCore.Authentication.Api.UnitTests;
 public class JwtBearerEventsFactoryTests
 {
     [Fact]
-    public void Create_WithNullAuth0Options_ThrowsArgumentNullException()
+    public void Create_WithNullEvents_ReturnsJwtBearerEventsWithProxiedHandlers()
     {
-        var jwtOptions = new JwtBearerOptions();
+        // Act
+        JwtBearerEvents result = JwtBearerEventsFactory.Create(null);
 
-        Func<JwtBearerEvents> act = () => JwtBearerEventsFactory.Create(null);
-
-        act.Should().Throw<ArgumentNullException>();
-    }
-
-    [Fact]
-    public void Create_WithNullAuth0OptionsEvents_ReturnsJwtBearerEventsWithNullHandlers()
-    {
-        var auth0Options = new Auth0ApiOptions { JwtBearerOptions = new JwtBearerOptions { Events = null } };
-
-        JwtBearerEvents result = JwtBearerEventsFactory.Create(auth0Options);
-
+        // Assert
         result.Should().NotBeNull();
         result.OnTokenValidated.Should().NotBeNull();
         result.OnAuthenticationFailed.Should().NotBeNull();
         result.OnMessageReceived.Should().NotBeNull();
         result.OnChallenge.Should().NotBeNull();
         result.OnForbidden.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Create_WithExistingEvents_PreservesUserHandlers()
+    {
+        // Arrange
+        var userHandlerCalled = false;
+        var existingEvents = new JwtBearerEvents
+        {
+            OnMessageReceived = _ =>
+            {
+                userHandlerCalled = true;
+                return Task.CompletedTask;
+            }
+        };
+
+        // Act
+        JwtBearerEvents result = JwtBearerEventsFactory.Create(existingEvents);
+        await result.OnMessageReceived(TestUtilities.CreateMessageReceivedContext());
+
+        // Assert
+        userHandlerCalled.Should().BeTrue();
     }
 }

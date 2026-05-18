@@ -10,25 +10,21 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Adds Auth0 JWT validation to the API
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.JwtBearerOptions = new JwtBearerOptions
+// Configuration is automatically bound from appsettings.json "Auth0" section
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
     {
-        Audience = builder.Configuration["Auth0:Audience"]
-                   ?? throw new InvalidOperationException("Auth0:Audience is required")
-    };
-    options.Domain = builder.Configuration["Auth0:Domain"]
-                     ?? throw new InvalidOperationException("Auth0:Domain is required");
-    options.JwtBearerOptions.Events = new JwtBearerEvents
-    {
-        // Custom event just to log the token received in the request.
-        OnMessageReceived = context =>
+        jwt.Events = new JwtBearerEvents
         {
-            Console.WriteLine($"Token extracted? : {(!string.IsNullOrEmpty(context.Token) ? "yes" : "no")}");
-            return Task.CompletedTask;
-        }
-    };
-}).WithDPoP();
+            // Custom event just to log the token received in the request.
+            OnMessageReceived = context =>
+            {
+                Console.WriteLine($"Token extracted? : {(!string.IsNullOrEmpty(context.Token) ? "yes" : "no")}");
+                return Task.CompletedTask;
+            }
+        };
+    }).WithDPoP();
 
 builder.Services.AddAuthorization();
 

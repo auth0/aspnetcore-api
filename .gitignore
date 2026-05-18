@@ -48,3 +48,6 @@ docfx.zip
 # Ignoring Misc
 .DS_Store
 .github/.DS_Store
+
+# Ignoring C# Dev Kit language service cache files
+*.lscache

@@ -9,20 +9,17 @@ public class Auth0JwtBearerPostConfigureOptionsTests
     {
         // Arrange
         var postConfigureOptions = new Auth0JwtBearerPostConfigureOptions();
-        var jwtBearerOptions = new Auth0ApiOptions
+        var jwtBearerOptions = new JwtBearerOptions
         {
-            JwtBearerOptions = new JwtBearerOptions
-            {
-                Backchannel = new HttpClient()
-            }
+            Backchannel = new HttpClient()
         };
         var expectedHeaderValue = Utils.CreateAgentString();
 
         // Act
-        postConfigureOptions.PostConfigure(null, jwtBearerOptions.JwtBearerOptions);
+        postConfigureOptions.PostConfigure(null, jwtBearerOptions);
 
         // Assert
-        jwtBearerOptions.JwtBearerOptions.Backchannel.DefaultRequestHeaders.GetValues("Auth0-Client").First().Should()
+        jwtBearerOptions.Backchannel.DefaultRequestHeaders.GetValues("Auth0-Client").First().Should()
             .Be(expectedHeaderValue);
     }
 }
