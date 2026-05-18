@@ -31,7 +31,7 @@ internal class Auth0ApiOptionsValidator : IValidateOptions<Auth0ApiOptions>
                     $"Auth0 Domain should be a hostname only (e.g., 'tenant.auth0.com'), not a full URL. " +
                     $"Received: '{options.Domain}'. The 'https://' prefix is added automatically.");
             }
-            else if (domain.Contains('/'))
+            else if (domain.TrimEnd('/').Contains('/'))
             {
                 failures.Add(
                     $"Auth0 Domain should be a hostname only (e.g., 'tenant.auth0.com') without a path. " +
@@ -50,7 +50,7 @@ internal class Auth0ApiOptionsValidator : IValidateOptions<Auth0ApiOptions>
                     $"Received: '{options.Domain}'.");
             }
             else if (!Uri.TryCreate($"https://{domain}", UriKind.Absolute, out var uri) ||
-                     !string.Equals(uri.Host, domain, StringComparison.OrdinalIgnoreCase))
+                     !string.Equals(uri.Host, domain.TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
             {
                 failures.Add(
                     $"Auth0 Domain is not a valid hostname. Expected format: 'tenant.auth0.com'. " +

@@ -137,6 +137,7 @@ public class AuthenticationBuilderExtensionsTest
     [InlineData("tenant.us.auth0.com")]
     [InlineData("my-tenant.auth0.com")]
     [InlineData("example.com")]
+    [InlineData("tenant.auth0.com/")]
     public void Auth0ApiOptionsValidator_ShouldSucceed_For_Valid_Domain(string domain)
     {
         var validator = new Auth0ApiOptionsValidator();
