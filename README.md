@@ -87,14 +87,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 **After:**
 ```csharp
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-});
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"));
 ```
 
 ### What You Get
@@ -125,53 +119,35 @@ Add Auth0 authentication to your ASP.NET Core API in `Program.cs`:
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
 
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+var builder = WebApplication.CreateBuilder(args);
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-// Adds Auth0 JWT validation to the API
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-});
+// Adds Auth0 JWT validation — reads Domain and Audience from appsettings.json
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"));
 
 builder.Services.AddAuthorization();
 
-WebApplication app = builder.Build();
+var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/open-endpoint", () =>
-    {
-        var responseMessage = "This endpoint is available to all users.";
-        return responseMessage;
-    })
-    .WithName("AccessOpenEndpoint")
-    .WithOpenApi();
+app.MapGet("/api/public", () => "This endpoint is available to all users.");
 
-app.MapGet("/restricted-endpoint", () =>
-    {
-        var responseMessage = "This endpoint is available only to authenticated users.";
-        return responseMessage;
-    })
-    .WithName("AccessRestrictedEndpoint")
-    .WithOpenApi().RequireAuthorization();
+app.MapGet("/api/protected", () => "This endpoint requires authentication.")
+    .RequireAuthorization();
 
 app.Run();
+```
 
+Alternatively, configure programmatically using a delegate:
+
+```csharp
+builder.Services.AddAuth0ApiAuthentication(options =>
+{
+    options.Domain = "your-tenant.auth0.com";
+    options.Audience = "https://your-api-identifier";
+});
 ```
 
 > **Want more examples?** Check out [EXAMPLES.md](./EXAMPLES.md) for comprehensive code examples including authorization policies, scopes, permissions, custom handlers, and more!
@@ -207,14 +183,9 @@ The library automatically constructs the authority URL as `https://{Domain}`.
 Enable DPoP with a single method call:
 
 ```csharp
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-}).WithDPoP(); // Enable DPoP support
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"))
+    .WithDPoP(); // Enable DPoP support
 ```
 
 That's it! Your API now supports DPoP tokens while maintaining backward compatibility with Bearer tokens.
@@ -224,22 +195,17 @@ That's it! Your API now supports DPoP tokens while maintaining backward compatib
 For fine-grained control, configure DPoP behavior:
 
 ```csharp
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"))
+    .WithDPoP(dpopOptions =>
     {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-}).WithDPoP(dpopOptions =>
-{
-    // Enforcement mode
-    dpopOptions.Mode = DPoPModes.Required;
+        // Enforcement mode
+        dpopOptions.Mode = DPoPModes.Required;
     
-    // Time validation settings
-    dpopOptions.IatOffset = 300; // Allow 300 seconds offset for 'iat' claim (default)
-    dpopOptions.Leeway = 30;     // 30 seconds leeway for time-based validation (default)
-});
+        // Time validation settings
+        dpopOptions.IatOffset = 300; // Allow 300 seconds offset for 'iat' claim (default)
+        dpopOptions.Leeway = 30;     // 30 seconds leeway for time-based validation (default)
+    });
 ```
 
 ### DPoP Modes
@@ -270,63 +236,54 @@ Multiple Custom Domains (MCD) lets you accept tokens from multiple Auth0 custom 
 ### Configuration
 
 ```csharp
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.JwtBearerOptions = new JwtBearerOptions
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"))
+    .WithCustomDomains(options =>
     {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-})
-.WithCustomDomains(options =>
-{
-    // Example: resolve from a request header
-    options.DomainsResolver = async (httpContext, cancellationToken) =>
-    {
-        var tenantService = httpContext.RequestServices.GetRequiredService<ITenantService>();
-        return await tenantService.GetAllowedDomainsAsync(cancellationToken);
-    };
-});
+        // Example: resolve from a request header
+        options.DomainsResolver = async (httpContext, cancellationToken) =>
+        {
+            var tenantService = httpContext.RequestServices.GetRequiredService<ITenantService>();
+            return await tenantService.GetAllowedDomainsAsync(cancellationToken);
+        };
+    });
 ```
 
 For detailed configuration options, caching strategies, security requirements, and more examples, see [EXAMPLES.md - Multiple Custom Domains](./EXAMPLES.md#multiple-custom-domains).
 
 ### Using Full JWT Bearer Options
 
-Since this library provides **complete access to JWT Bearer configuration**, you can use any standard JWT Bearer option:
+Since this library provides **complete access to JWT Bearer configuration**, you can use any standard JWT Bearer option via the `configureJwtBearer` parameter:
 
 ```csharp
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
     {
-        Audience = builder.Configuration["Auth0:Audience"],
-        
         // All standard JWT Bearer options are available
-        RequireHttpsMetadata = true,
-        SaveToken = true,
-        IncludeErrorDetails = true,
+        jwt.RequireHttpsMetadata = true;
+        jwt.SaveToken = true;
+        jwt.IncludeErrorDetails = true;
         
         // Custom token validation parameters
-        TokenValidationParameters = new TokenValidationParameters
+        jwt.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(5),
             NameClaimType = ClaimTypes.NameIdentifier
-        },
+        };
         
         // Event handlers for custom logic
-        Events = new JwtBearerEvents
+        jwt.Events = new JwtBearerEvents
         {
             OnAuthenticationFailed = context =>
             {
                 Console.WriteLine($"Authentication failed: {context.Exception.Message}");
                 return Task.CompletedTask;
             }
-        }
-    };
-});
+        };
+    });
 ```
 
 > **Looking for more advanced scenarios?** Visit [EXAMPLES.md](./EXAMPLES.md) for examples on:
