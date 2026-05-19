@@ -956,6 +956,8 @@ If you have advanced `JwtBearerOptions` properties beyond basic `Audience`, move
 - `RequireHttpsMetadata` → Inside `configureJwtBearer: jwt => { jwt.RequireHttpsMetadata = ...; }`
 - And any other `JwtBearerOptions` properties
 
+> **Important:** The `configureJwtBearer` callback is captured in a singleton. Do not close over scoped services (e.g., `DbContext`, scoped configuration resolvers) inside this callback. If you need request-scoped data, resolve it from `context.HttpContext.RequestServices` inside event handlers instead.
+
 ### Step 5: Update appsettings.json (if needed)
 
 Ensure your `appsettings.json` has the Auth0 configuration:
@@ -1669,7 +1671,44 @@ Even though you're using `Auth0.AspNetCore.Authentication.Api`, you still need t
 
 ---
 
-### 10. Configuration Values Are Null
+### 10. Scoped Service Captured in configureJwtBearer Callback
+
+**Symptom:** Stale data, `ObjectDisposedException`, or cross-request state leakage.
+
+**Cause:** The `configureJwtBearer` delegate is held in a singleton (`IConfigureNamedOptions<JwtBearerOptions>`). Closing over a scoped service (e.g., `DbContext`) captures it for the entire application lifetime.
+
+**Solution:**
+```csharp
+// ❌ BAD — scoped service captured in singleton-lifetime delegate
+var dbContext = sp.GetRequiredService<MyDbContext>();
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
+    {
+        jwt.Audience = dbContext.GetAudience(); // captive dependency!
+    });
+
+// ✅ CORRECT — resolve scoped services inside event handlers via RequestServices
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
+    {
+        jwt.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = context =>
+            {
+                var db = context.HttpContext.RequestServices
+                    .GetRequiredService<MyDbContext>();
+                // safe — resolved per-request
+                return Task.CompletedTask;
+            }
+        };
+    });
+```
+
+---
+
+### 11. Configuration Values Are Null
 
 **Symptom:** `Auth0:Domain` or `Auth0:Audience` configuration returns null.
 
