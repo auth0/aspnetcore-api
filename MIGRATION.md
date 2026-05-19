@@ -748,13 +748,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 var authBuilder = builder.Services.AddAuthentication();
 
-// Bind Auth0 options first
-builder.Services.Configure<Auth0ApiOptions>(
-    "Auth0",
-    builder.Configuration.GetSection("Auth0"));
-
-// Add Auth0 authentication
-authBuilder.AddAuth0ApiAuthentication("Auth0");
+// Add Auth0 authentication with configuration section
+authBuilder.AddAuth0ApiAuthentication("Auth0", builder.Configuration.GetSection("Auth0"));
 
 // Add another authentication scheme (e.g., API Key)
 authBuilder.AddScheme<ApiKeyAuthOptions, ApiKeyAuthHandler>("ApiKey", options => { });
@@ -767,11 +762,20 @@ app.UseAuthorization();
 app.Run();
 ```
 
+Or configure programmatically:
+
+```csharp
+authBuilder.AddAuth0ApiAuthentication("Auth0", options =>
+{
+    options.Domain = "your-tenant.auth0.com";
+    options.Audience = "https://your-api-identifier";
+});
+```
+
 #### Key Changes
 1. Replace `.AddJwtBearer()` with `.AddAuth0ApiAuthentication()` on the `AuthenticationBuilder`
-2. Register `Auth0ApiOptions` for the scheme **before** calling `AddAuth0ApiAuthentication()` — this is required because the `AuthenticationBuilder` extension only configures the JWT Bearer scheme; it does not register options itself (unlike the `IServiceCollection` extensions which handle both)
-3. Pass only the scheme name to `AuthenticationBuilder.AddAuth0ApiAuthentication()`
-4. Other authentication schemes remain unchanged
+2. Pass the scheme name along with an `IConfigurationSection` or an `Action<Auth0ApiOptions>` delegate — options are registered automatically
+3. Other authentication schemes remain unchanged
 
 ---
 

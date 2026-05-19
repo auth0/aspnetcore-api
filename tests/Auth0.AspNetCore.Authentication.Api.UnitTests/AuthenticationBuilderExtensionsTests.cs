@@ -418,6 +418,130 @@ public class AuthenticationBuilderExtensionsTest
 
     #endregion
 
+    #region AddAuth0ApiAuthentication_WithConfigurationSection
+
+    [Fact]
+    public void AddAuth0ApiAuthentication_WithConfigurationSection_Should_Register_Options()
+    {
+        // Arrange
+        var configData = new Dictionary<string, string?>
+        {
+            { "Auth0:Domain", "test.auth0.com" },
+            { "Auth0:Audience", "https://api.example.com" }
+        };
+        IConfigurationSection section = new ConfigurationBuilder()
+            .AddInMemoryCollection(configData)
+            .Build()
+            .GetSection("Auth0");
+
+        // Act
+        Auth0ApiAuthenticationBuilder result = _authenticationBuilder.AddAuth0ApiAuthentication(section);
+
+        // Assert
+        result.AuthenticationScheme.Should().Be(Auth0Constants.AuthenticationScheme.Auth0);
+
+        ServiceProvider sp = _services.BuildServiceProvider();
+        var options = sp.GetRequiredService<IOptionsMonitor<Auth0ApiOptions>>()
+            .Get(Auth0Constants.AuthenticationScheme.Auth0);
+
+        options.Domain.Should().Be("test.auth0.com");
+        options.Audience.Should().Be("https://api.example.com");
+    }
+
+    [Fact]
+    public void AddAuth0ApiAuthentication_WithConfigurationSection_And_CustomScheme_Should_Register_Options()
+    {
+        // Arrange
+        var configData = new Dictionary<string, string?>
+        {
+            { "Auth0:Domain", "test.auth0.com" },
+            { "Auth0:Audience", "https://api.example.com" }
+        };
+        IConfigurationSection section = new ConfigurationBuilder()
+            .AddInMemoryCollection(configData)
+            .Build()
+            .GetSection("Auth0");
+
+        // Act
+        Auth0ApiAuthenticationBuilder result =
+            _authenticationBuilder.AddAuth0ApiAuthentication("CustomScheme", section);
+
+        // Assert
+        result.AuthenticationScheme.Should().Be("CustomScheme");
+
+        ServiceProvider sp = _services.BuildServiceProvider();
+        var options = sp.GetRequiredService<IOptionsMonitor<Auth0ApiOptions>>()
+            .Get("CustomScheme");
+
+        options.Domain.Should().Be("test.auth0.com");
+        options.Audience.Should().Be("https://api.example.com");
+    }
+
+    [Fact]
+    public void AddAuth0ApiAuthentication_WithConfigurationSection_Null_Should_Throw()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            _authenticationBuilder.AddAuth0ApiAuthentication((IConfigurationSection)null!));
+    }
+
+    #endregion
+
+    #region AddAuth0ApiAuthentication_WithConfigureOptions
+
+    [Fact]
+    public void AddAuth0ApiAuthentication_WithConfigureOptions_Should_Register_Options()
+    {
+        // Act
+        Auth0ApiAuthenticationBuilder result = _authenticationBuilder.AddAuth0ApiAuthentication(opts =>
+        {
+            opts.Domain = "test.auth0.com";
+            opts.Audience = "https://api.example.com";
+        });
+
+        // Assert
+        result.AuthenticationScheme.Should().Be(Auth0Constants.AuthenticationScheme.Auth0);
+
+        ServiceProvider sp = _services.BuildServiceProvider();
+        var options = sp.GetRequiredService<IOptionsMonitor<Auth0ApiOptions>>()
+            .Get(Auth0Constants.AuthenticationScheme.Auth0);
+
+        options.Domain.Should().Be("test.auth0.com");
+        options.Audience.Should().Be("https://api.example.com");
+    }
+
+    [Fact]
+    public void AddAuth0ApiAuthentication_WithConfigureOptions_And_CustomScheme_Should_Register_Options()
+    {
+        // Act
+        Auth0ApiAuthenticationBuilder result =
+            _authenticationBuilder.AddAuth0ApiAuthentication("CustomScheme", opts =>
+            {
+                opts.Domain = "test.auth0.com";
+                opts.Audience = "https://api.example.com";
+            });
+
+        // Assert
+        result.AuthenticationScheme.Should().Be("CustomScheme");
+
+        ServiceProvider sp = _services.BuildServiceProvider();
+        var options = sp.GetRequiredService<IOptionsMonitor<Auth0ApiOptions>>()
+            .Get("CustomScheme");
+
+        options.Domain.Should().Be("test.auth0.com");
+        options.Audience.Should().Be("https://api.example.com");
+    }
+
+    [Fact]
+    public void AddAuth0ApiAuthentication_WithConfigureOptions_Null_Should_Throw()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            _authenticationBuilder.AddAuth0ApiAuthentication((Action<Auth0ApiOptions>)null!));
+    }
+
+    #endregion
+
     #region ValidateCustomDomainsOptionsTests
 
     private Auth0ApiAuthenticationBuilder CreateAuth0Builder()

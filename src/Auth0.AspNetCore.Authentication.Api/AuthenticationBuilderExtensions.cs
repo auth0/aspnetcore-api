@@ -6,6 +6,7 @@ using Auth0.AspNetCore.Authentication.Api.DPoP.EventHandlers;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -35,6 +36,100 @@ public static class AuthenticationBuilderExtensions
         this AuthenticationBuilder builder, Action<JwtBearerOptions>? configureJwtBearer = null)
     {
         return AddAuth0ApiAuthentication(builder, Auth0Constants.AuthenticationScheme.Auth0, configureJwtBearer);
+    }
+
+    /// <summary>
+    ///     Adds Auth0 authentication for API using configuration from an <see cref="IConfigurationSection" />
+    ///     with the default Auth0 scheme.
+    /// </summary>
+    /// <param name="builder">The <see cref="AuthenticationBuilder" /> instance to configure.</param>
+    /// <param name="configurationSection">
+    ///     The configuration section containing Auth0 settings (Domain and Audience).
+    /// </param>
+    /// <param name="configureJwtBearer">
+    ///     An optional action to further configure the underlying <see cref="JwtBearerOptions" />.
+    /// </param>
+    /// <returns>An <see cref="Auth0ApiAuthenticationBuilder" /> for further configuration.</returns>
+    public static Auth0ApiAuthenticationBuilder AddAuth0ApiAuthentication(
+        this AuthenticationBuilder builder,
+        IConfigurationSection configurationSection,
+        Action<JwtBearerOptions>? configureJwtBearer = null)
+    {
+        return AddAuth0ApiAuthentication(builder, Auth0Constants.AuthenticationScheme.Auth0, configurationSection,
+            configureJwtBearer);
+    }
+
+    /// <summary>
+    ///     Adds Auth0 authentication for API using configuration from an <see cref="IConfigurationSection" />
+    ///     with a specified authentication scheme.
+    /// </summary>
+    /// <param name="builder">The <see cref="AuthenticationBuilder" /> instance to configure.</param>
+    /// <param name="authenticationScheme">The authentication scheme to use for Auth0 authentication.</param>
+    /// <param name="configurationSection">
+    ///     The configuration section containing Auth0 settings (Domain and Audience).
+    /// </param>
+    /// <param name="configureJwtBearer">
+    ///     An optional action to further configure the underlying <see cref="JwtBearerOptions" />.
+    /// </param>
+    /// <returns>An <see cref="Auth0ApiAuthenticationBuilder" /> for further configuration.</returns>
+    public static Auth0ApiAuthenticationBuilder AddAuth0ApiAuthentication(
+        this AuthenticationBuilder builder,
+        string authenticationScheme,
+        IConfigurationSection configurationSection,
+        Action<JwtBearerOptions>? configureJwtBearer = null)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(authenticationScheme);
+        ArgumentNullException.ThrowIfNull(configurationSection);
+
+        builder.Services.Configure<Auth0ApiOptions>(authenticationScheme, configurationSection);
+
+        return AddAuth0ApiAuthentication(builder, authenticationScheme, configureJwtBearer);
+    }
+
+    /// <summary>
+    ///     Adds Auth0 authentication for API using a delegate to configure options programmatically
+    ///     with the default Auth0 scheme.
+    /// </summary>
+    /// <param name="builder">The <see cref="AuthenticationBuilder" /> instance to configure.</param>
+    /// <param name="configureOptions">An action to configure the <see cref="Auth0ApiOptions" />.</param>
+    /// <param name="configureJwtBearer">
+    ///     An optional action to further configure the underlying <see cref="JwtBearerOptions" />.
+    /// </param>
+    /// <returns>An <see cref="Auth0ApiAuthenticationBuilder" /> for further configuration.</returns>
+    public static Auth0ApiAuthenticationBuilder AddAuth0ApiAuthentication(
+        this AuthenticationBuilder builder,
+        Action<Auth0ApiOptions> configureOptions,
+        Action<JwtBearerOptions>? configureJwtBearer = null)
+    {
+        return AddAuth0ApiAuthentication(builder, Auth0Constants.AuthenticationScheme.Auth0, configureOptions,
+            configureJwtBearer);
+    }
+
+    /// <summary>
+    ///     Adds Auth0 authentication for API using a delegate to configure options programmatically
+    ///     with a specified authentication scheme.
+    /// </summary>
+    /// <param name="builder">The <see cref="AuthenticationBuilder" /> instance to configure.</param>
+    /// <param name="authenticationScheme">The authentication scheme to use for Auth0 authentication.</param>
+    /// <param name="configureOptions">An action to configure the <see cref="Auth0ApiOptions" />.</param>
+    /// <param name="configureJwtBearer">
+    ///     An optional action to further configure the underlying <see cref="JwtBearerOptions" />.
+    /// </param>
+    /// <returns>An <see cref="Auth0ApiAuthenticationBuilder" /> for further configuration.</returns>
+    public static Auth0ApiAuthenticationBuilder AddAuth0ApiAuthentication(
+        this AuthenticationBuilder builder,
+        string authenticationScheme,
+        Action<Auth0ApiOptions> configureOptions,
+        Action<JwtBearerOptions>? configureJwtBearer = null)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(authenticationScheme);
+        ArgumentNullException.ThrowIfNull(configureOptions);
+
+        builder.Services.Configure<Auth0ApiOptions>(authenticationScheme, configureOptions);
+
+        return AddAuth0ApiAuthentication(builder, authenticationScheme, configureJwtBearer);
     }
 
     /// <summary>

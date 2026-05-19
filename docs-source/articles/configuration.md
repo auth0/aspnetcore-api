@@ -112,6 +112,27 @@ export Auth0__Audience="https://your-api-identifier"
 
 No code changes needed — the `GetSection("Auth0")` call picks up values from all configured providers (appsettings.json, environment variables, user secrets, etc.).
 
+## Using AuthenticationBuilder Directly
+
+If you're composing multiple authentication schemes and need to work with `AuthenticationBuilder` directly, the same configuration patterns are available:
+
+```csharp
+var authBuilder = builder.Services.AddAuthentication();
+
+// From configuration section
+authBuilder.AddAuth0ApiAuthentication("Auth0", builder.Configuration.GetSection("Auth0"));
+
+// Or programmatically
+authBuilder.AddAuth0ApiAuthentication("Auth0", options =>
+{
+    options.Domain = "your-tenant.auth0.com";
+    options.Audience = "https://your-api-identifier";
+});
+
+// Add other schemes as needed
+authBuilder.AddScheme<ApiKeyAuthOptions, ApiKeyAuthHandler>("ApiKey", options => { });
+```
+
 ## Next Steps
 
 - [DPoP Overview](dpop-overview.md) - Understanding DPoP and its security benefits
