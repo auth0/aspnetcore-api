@@ -60,33 +60,27 @@ public class TestWebApplicationFactory : IAsyncDisposable
                     services.AddHttpClient();
 
                     // Add Auth0 JWT validation
-                    var authBuilder = services.AddAuth0ApiAuthentication(options =>
-                    {
-                        options.Domain = context.Configuration["Auth0:Domain"]
-                                       ?? throw new InvalidOperationException("Auth0:Domain is required");
-                        options.JwtBearerOptions = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions
+                    var authBuilder = services.AddAuth0ApiAuthentication(
+                        context.Configuration.GetSection("Auth0"),
+                        configureJwtBearer: jwt =>
                         {
-                            Audience = context.Configuration["Auth0:Audience"]
-                                     ?? throw new InvalidOperationException("Auth0:Audience is required")
-                        };
-
-                        // Support multiple audiences for custom domains testing
-                        if (_validAudiences != null && _validAudiences.Length > 0)
-                        {
-                            options.JwtBearerOptions.TokenValidationParameters.ValidAudiences = _validAudiences;
-                        }
-
-                        // Handle authentication failures gracefully for testing
-                        options.JwtBearerOptions.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
-                        {
-                            OnAuthenticationFailed = context =>
+                            // Support multiple audiences for custom domains testing
+                            if (_validAudiences != null && _validAudiences.Length > 0)
                             {
-                                // SecurityTokenException from custom domains validation should result in 401
-                                // Don't rethrow - let the middleware handle it as authentication failure
-                                return Task.CompletedTask;
+                                jwt.TokenValidationParameters.ValidAudiences = _validAudiences;
                             }
-                        };
-                    });
+
+                            // Handle authentication failures gracefully for testing
+                            jwt.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+                            {
+                                OnAuthenticationFailed = context =>
+                                {
+                                    // SecurityTokenException from custom domains validation should result in 401
+                                    // Don't rethrow - let the middleware handle it as authentication failure
+                                    return Task.CompletedTask;
+                                }
+                            };
+                        });
 
                     // Configure custom domains if provided
                     if (_customDomains != null && _customDomains.Length > 0)

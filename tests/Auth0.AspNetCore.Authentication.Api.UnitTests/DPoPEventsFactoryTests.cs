@@ -7,26 +7,44 @@ namespace Auth0.AspNetCore.Authentication.Api.UnitTests;
 public class DPoPEventsFactoryTests
 {
     [Fact]
-    public void Create_WithNullAuth0Options_ThrowsArgumentNullException()
+    public void Create_WithNullEvents_ReturnsJwtBearerEventsWithDPoPHandlers()
     {
-        Func<JwtBearerEvents> act = () => DPoPEventsFactory.Create(null);
+        // Act
+        JwtBearerEvents result = DPoPEventsFactory.Create(null);
 
-        act.Should().Throw<ArgumentNullException>();
-    }
-
-    [Fact]
-    public void Create_WithNullAuth0OptionsEvents_ReturnsJwtBearerEventsWithNullHandlers()
-    {
-        var dPoPOptions = new DPoPOptions();
-        var auth0Options = new Auth0ApiOptions { JwtBearerOptions = new JwtBearerOptions { Events = null } };
-
-        JwtBearerEvents result = DPoPEventsFactory.Create(auth0Options);
-
+        // Assert
         result.Should().NotBeNull();
         result.OnTokenValidated.Should().NotBeNull();
         result.OnAuthenticationFailed.Should().NotBeNull();
         result.OnMessageReceived.Should().NotBeNull();
         result.OnChallenge.Should().NotBeNull();
         result.OnForbidden.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Create_WithExistingEvents_PreservesUserHandlers()
+    {
+        // Arrange
+        var userHandlerCalled = false;
+        var existingEvents = new JwtBearerEvents
+        {
+            OnMessageReceived = _ =>
+            {
+                userHandlerCalled = true;
+                return Task.CompletedTask;
+            }
+        };
+
+        // Act
+        JwtBearerEvents result = DPoPEventsFactory.Create(existingEvents);
+
+        // Create a context with DPoP services available
+        var context = TestUtilities.CreateMessageReceivedContext()
+            .WithDPoPOptions(new DPoPOptions());
+
+        await result.OnMessageReceived(context);
+
+        // Assert - user handler is called after DPoP handler in the chain
+        userHandlerCalled.Should().BeTrue();
     }
 }

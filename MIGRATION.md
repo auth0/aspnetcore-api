@@ -83,6 +83,8 @@ This migration guide applies to:
 
 **There are NO breaking changes in this migration.** The library is designed as a drop-in replacement for JWT Bearer authentication.
 
+> **Upgrading from a pre-release beta?** The `WithDPoP(string authenticationScheme, ...)` overloads have been removed. The scheme is now inferred automatically from the `Auth0ApiAuthenticationBuilder`. Simply remove the scheme parameter from your `WithDPoP()` calls.
+
 ### API Surface Changes
 
 The only API change is the configuration method:
@@ -91,12 +93,17 @@ The only API change is the configuration method:
 // Before: JwtBearer API surface
 AddJwtBearer(options => { /* ... */ })
 
-// After: Auth0 API surface
-AddAuth0ApiAuthentication(options => 
-{
-    options.Domain = "...";
-    options.JwtBearerOptions = new JwtBearerOptions { /* ... */ };
-})
+// After: Auth0 API surface (configuration section binding)
+AddAuth0ApiAuthentication(builder.Configuration.GetSection("Auth0"))
+
+// Or with advanced JwtBearerOptions configuration
+AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt => 
+    {
+        jwt.TokenValidationParameters = new TokenValidationParameters { /* ... */ };
+        jwt.Events = new JwtBearerEvents { /* ... */ };
+    })
 ```
 
 ### Behavioral Guarantees
@@ -187,8 +194,8 @@ Before starting the migration, ensure you have:
 
 ### Configuration Changes
 - **Before:** Configure `Authority` and `Audience` in `JwtBearerOptions`
-- **After:** Configure `Domain` in `Auth0ApiOptions` and `Audience` in `JwtBearerOptions`
-- **Why:** Simpler Auth0-specific configuration pattern
+- **After:** Configure `Domain` and `Audience` in `Auth0ApiOptions` (bindable from `appsettings.json`)
+- **Why:** Idiomatic .NET configuration using `IOptions<T>` and `IConfiguration` binding
 
 ### No Behavioral Changes
 - Token validation remains **identical**
@@ -235,18 +242,11 @@ app.Run();
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-});
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"));
 
 builder.Services.AddAuthorization();
 
@@ -264,8 +264,8 @@ app.Run();
 #### Key Changes
 1. Import `Auth0.AspNetCore.Authentication.Api` namespace
 2. Replace `AddAuthentication().AddJwtBearer()` with `AddAuth0ApiAuthentication()`
-3. Set `options.Domain` instead of constructing `Authority`
-4. Move `Audience` into `options.JwtBearerOptions`
+3. Pass `builder.Configuration.GetSection("Auth0")` to bind Domain and Audience from configuration
+4. No need to manually configure JwtBearerOptions for basic setup
 
 ---
 
@@ -306,19 +306,13 @@ app.Run();
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication("MyCustomScheme", options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-});
+builder.Services.AddAuth0ApiAuthentication(
+    "MyCustomScheme",
+    builder.Configuration.GetSection("Auth0"));
 
 builder.Services.AddAuthorization(options =>
 {
@@ -337,7 +331,8 @@ app.Run();
 
 #### Key Changes
 1. Pass scheme name as first parameter to `AddAuth0ApiAuthentication()`
-2. Authorization policies reference the same scheme name (unchanged)
+2. Pass `builder.Configuration.GetSection("Auth0")` as second parameter
+3. Authorization policies reference the same scheme name (unchanged)
 
 ---
 
@@ -383,19 +378,15 @@ app.Run();
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
     {
-        Audience = builder.Configuration["Auth0:Audience"],
-        
-        TokenValidationParameters = new TokenValidationParameters
+        jwt.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
             ValidateIssuer = true,
@@ -404,9 +395,8 @@ builder.Services.AddAuth0ApiAuthentication(options =>
             ClockSkew = TimeSpan.FromMinutes(2),
             NameClaimType = "name",
             RoleClaimType = "https://myapp.com/roles"
-        }
-    };
-});
+        };
+    });
 
 builder.Services.AddAuthorization();
 
@@ -417,7 +407,7 @@ app.Run();
 ```
 
 #### Key Changes
-1. Move `TokenValidationParameters` into `options.JwtBearerOptions`
+1. Move `TokenValidationParameters` into the `configureJwtBearer:` callback parameter
 2. All validation settings remain exactly the same
 
 ---
@@ -493,14 +483,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
     {
-        Audience = builder.Configuration["Auth0:Audience"],
-        
-        Events = new JwtBearerEvents
+        jwt.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
@@ -535,9 +522,8 @@ builder.Services.AddAuth0ApiAuthentication(options =>
                 logger.LogWarning("Authentication challenge issued");
                 return Task.CompletedTask;
             }
-        }
-    };
-});
+        };
+    });
 
 builder.Services.AddAuthorization();
 
@@ -548,7 +534,7 @@ app.Run();
 ```
 
 #### Key Changes
-1. Move entire `Events` object into `options.JwtBearerOptions`
+1. Move entire `Events` object into the `configureJwtBearer:` callback parameter
 2. All event handlers remain **completely unchanged**
 
 ---
@@ -592,26 +578,23 @@ app.Run();
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
     {
-        TokenValidationParameters = new TokenValidationParameters
+        jwt.TokenValidationParameters = new TokenValidationParameters
         {
             ValidAudiences = new[]
             {
                 builder.Configuration["Auth0:Audience:Api"],
                 builder.Configuration["Auth0:Audience:Legacy"]
             }
-        }
-    };
-});
+        };
+    });
 
 builder.Services.AddAuthorization();
 
@@ -622,8 +605,9 @@ app.Run();
 ```
 
 #### Key Changes
-1. Move `ValidAudiences` into `options.JwtBearerOptions.TokenValidationParameters`
-2. When using multiple audiences, you don't set single `Audience` property
+1. Move `ValidAudiences` into the `configureJwtBearer:` callback parameter
+2. When using multiple audiences, set `ValidAudiences` in the callback instead of `Audience` in configuration
+3. Leave `Audience` **unset** in `appsettings.json` (omit the key entirely, or leave it empty). The SDK validates that either `Audience` or `ValidAudiences` is configured — if `ValidAudiences` is set in the callback, the single `Audience` check is skipped automatically
 
 ---
 
@@ -683,14 +667,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
     {
-        Audience = builder.Configuration["Auth0:Audience"],
-        
-        Events = new JwtBearerEvents
+        jwt.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
@@ -710,9 +691,8 @@ builder.Services.AddAuth0ApiAuthentication(options =>
                 
                 return Task.CompletedTask;
             }
-        }
-    };
-});
+        };
+    });
 
 builder.Services.AddAuthorization();
 
@@ -723,7 +703,7 @@ app.Run();
 ```
 
 #### Key Changes
-1. Move custom `OnMessageReceived` event into `options.JwtBearerOptions.Events`
+1. Move custom `OnMessageReceived` event into the `configureJwtBearer:` callback parameter
 2. Token retrieval logic remains **identical**
 
 ---
@@ -763,21 +743,13 @@ app.Run();
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var authBuilder = builder.Services.AddAuthentication();
 
-// Add Auth0 authentication
-authBuilder.AddAuth0ApiAuthentication("Auth0", options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-});
+// Add Auth0 authentication with configuration section
+authBuilder.AddAuth0ApiAuthentication("Auth0", builder.Configuration.GetSection("Auth0"));
 
 // Add another authentication scheme (e.g., API Key)
 authBuilder.AddScheme<ApiKeyAuthOptions, ApiKeyAuthHandler>("ApiKey", options => { });
@@ -790,9 +762,20 @@ app.UseAuthorization();
 app.Run();
 ```
 
+Or configure programmatically:
+
+```csharp
+authBuilder.AddAuth0ApiAuthentication("Auth0", options =>
+{
+    options.Domain = "your-tenant.auth0.com";
+    options.Audience = "https://your-api-identifier";
+});
+```
+
 #### Key Changes
 1. Replace `.AddJwtBearer()` with `.AddAuth0ApiAuthentication()` on the `AuthenticationBuilder`
-2. Other authentication schemes remain unchanged
+2. Pass the scheme name along with an `IConfigurationSection` or an `Action<Auth0ApiOptions>` delegate — options are registered automatically
+3. Other authentication schemes remain unchanged
 
 ---
 
@@ -860,20 +843,13 @@ public record ProductModel(int Id, string Name);
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-});
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"));
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
@@ -940,7 +916,7 @@ Add the Auth0 namespace to your `Program.cs` or `Startup.cs`:
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
-using Microsoft.AspNetCore.Authentication.JwtBearer; // Still needed for JwtBearerOptions
+using Microsoft.AspNetCore.Authentication.JwtBearer; // Only needed if using custom JwtBearerEvents or JwtBearerOptions
 ```
 
 ### Step 3: Update Configuration Code
@@ -956,29 +932,35 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 ```
 
-**Replace with:**
+**For basic setup (no advanced JwtBearerOptions), replace with:**
 ```csharp
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-        // ... move other JwtBearerOptions properties here
-    };
-});
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"));
 ```
 
-### Step 4: Move JWT Bearer Options
+**For advanced setup with JwtBearerOptions, replace with:**
+```csharp
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
+    {
+        // Configure any advanced properties here
+        // jwt.TokenValidationParameters = ...
+        // jwt.Events = ...
+    });
+```
 
-Take all properties you previously configured on `JwtBearerOptions` and nest them inside `options.JwtBearerOptions`:
+### Step 4: Move JWT Bearer Options (if applicable)
 
-- `Audience` → `options.JwtBearerOptions.Audience`
-- `TokenValidationParameters` → `options.JwtBearerOptions.TokenValidationParameters`
-- `Events` → `options.JwtBearerOptions.Events`
-- `MetadataAddress` → `options.JwtBearerOptions.MetadataAddress`
-- `RequireHttpsMetadata` → `options.JwtBearerOptions.RequireHttpsMetadata`
+If you have advanced `JwtBearerOptions` properties beyond basic `Audience`, move them into the `configureJwtBearer:` callback:
+
+- `TokenValidationParameters` → Inside `configureJwtBearer: jwt => { jwt.TokenValidationParameters = ...; }`
+- `Events` → Inside `configureJwtBearer: jwt => { jwt.Events = ...; }`
+- `MetadataAddress` → Inside `configureJwtBearer: jwt => { jwt.MetadataAddress = ...; }`
+- `RequireHttpsMetadata` → Inside `configureJwtBearer: jwt => { jwt.RequireHttpsMetadata = ...; }`
 - And any other `JwtBearerOptions` properties
+
+> **Important:** The `configureJwtBearer` callback is captured in a singleton. Do not close over scoped services (e.g., `DbContext`, scoped configuration resolvers) inside this callback. If you need request-scoped data, resolve it from `context.HttpContext.RequestServices` inside event handlers instead.
 
 ### Step 5: Update appsettings.json (if needed)
 
@@ -1031,14 +1013,9 @@ DPoP (Demonstration of Proof-of-Possession) binds access tokens to cryptographic
 Simply add `.WithDPoP()` after `AddAuth0ApiAuthentication()`:
 
 ```csharp
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-}).WithDPoP(); // ⭐ Enable DPoP support
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"))
+    .WithDPoP(); // ⭐ Enable DPoP support
 ```
 
 **Default behavior:** Accepts both DPoP tokens and regular Bearer tokens (gradual adoption mode).
@@ -1048,20 +1025,15 @@ builder.Services.AddAuth0ApiAuthentication(options =>
 Configure DPoP enforcement level:
 
 ```csharp
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"))
+    .WithDPoP(dpopOptions =>
     {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-}).WithDPoP(dpopOptions =>
-{
-    // Choose one:
-    dpopOptions.Mode = DPoPModes.Allowed;   // Accept both DPoP and Bearer (default)
-    dpopOptions.Mode = DPoPModes.Required;  // Only accept DPoP tokens
-    dpopOptions.Mode = DPoPModes.Disabled;  // Standard JWT Bearer only
-});
+        // Choose one:
+        dpopOptions.Mode = DPoPModes.Allowed;   // Accept both DPoP and Bearer (default)
+        dpopOptions.Mode = DPoPModes.Required;  // Only accept DPoP tokens
+        dpopOptions.Mode = DPoPModes.Disabled;  // Standard JWT Bearer only
+    });
 ```
 
 ### Gradual DPoP Adoption Strategy
@@ -1114,14 +1086,11 @@ curl -H "Authorization: Bearer <wrong-issuer-token>" https://localhost:5001/api/
 Ensure security events are logged:
 
 ```csharp
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
     {
-        Audience = builder.Configuration["Auth0:Audience"],
-        
-        Events = new JwtBearerEvents
+        jwt.Events = new JwtBearerEvents
         {
             OnAuthenticationFailed = context =>
             {
@@ -1137,9 +1106,8 @@ builder.Services.AddAuth0ApiAuthentication(options =>
                     
                 return Task.CompletedTask;
             }
-        }
-    };
-});
+        };
+    });
 ```
 
 ### Security Checklist
@@ -1497,18 +1465,34 @@ options.Domain = "my-tenant.auth0.com";
 
 **Symptom:** Application fails to start with audience validation error.
 
-**Cause:** Audience not configured in `JwtBearerOptions`.
+**Cause:** Audience not configured in `appsettings.json` or not bound to configuration section.
 
 **Solution:**
-```csharp
-builder.Services.AddAuth0ApiAuthentication(options =>
+
+Ensure your `appsettings.json` has the `Audience` configured:
+```json
 {
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
+  "Auth0": {
+    "Domain": "your-tenant.auth0.com",
+    "Audience": "https://your-api-identifier"
+  }
+}
+```
+
+And pass the configuration section to the method:
+```csharp
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0")); // ✅ Must be set
+```
+
+Or configure it programmatically in the callback:
+```csharp
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
     {
-        Audience = builder.Configuration["Auth0:Audience"] // ✅ Must be set
-    };
-});
+        jwt.Audience = "https://your-api-identifier"; // ✅ If not in config
+    });
 ```
 
 ---
@@ -1517,22 +1501,26 @@ builder.Services.AddAuth0ApiAuthentication(options =>
 
 **Symptom:** Application fails to start with null parameter error.
 
-**Cause:** Missing configuration action.
+**Cause:** Missing configuration section or parameter.
 
 **Solution:**
+
+Pass the configuration section as a parameter:
 ```csharp
-// ❌ WRONG - Missing configuration
+// ❌ WRONG - Missing configuration section
 builder.Services.AddAuth0ApiAuthentication();
 
-// ✅ CORRECT - Provide configuration action
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-});
+// ✅ CORRECT - Provide configuration section
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"));
+```
+
+Or if using with a custom scheme:
+```csharp
+// ✅ CORRECT - Provide scheme name and configuration section
+builder.Services.AddAuth0ApiAuthentication(
+    "MyCustomScheme",
+    builder.Configuration.GetSection("Auth0"));
 ```
 
 ---
@@ -1541,27 +1529,25 @@ builder.Services.AddAuth0ApiAuthentication(options =>
 
 **Symptom:** JWT Bearer events you configured aren't being called.
 
-**Cause:** Events not moved into `JwtBearerOptions`.
+**Cause:** Events not moved into the `configureJwtBearer:` callback.
 
 **Solution:**
 ```csharp
-// ❌ WRONG - Events at wrong level
+// ❌ WRONG - Trying to set Events on Auth0ApiOptions (no such property)
 builder.Services.AddAuth0ApiAuthentication(options =>
 {
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.Events = new JwtBearerEvents { /* ... */ }; // This doesn't exist!
+    options.Domain = "your-tenant.auth0.com";
+    options.Audience = "https://your-api-identifier";
+    // options.Events = ... ← Auth0ApiOptions only has Domain and Audience!
 });
 
-// ✅ CORRECT - Events inside JwtBearerOptions
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
+// ✅ CORRECT - Events inside configureJwtBearer callback
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
     {
-        Audience = builder.Configuration["Auth0:Audience"],
-        Events = new JwtBearerEvents { /* ... */ } // ✅ Correct location
-    };
-});
+        jwt.Events = new JwtBearerEvents { /* ... */ }; // ✅ Correct location
+    });
 ```
 
 ---
@@ -1572,23 +1558,29 @@ builder.Services.AddAuth0ApiAuthentication(options =>
 
 **Cause:** Using single `Audience` property instead of `ValidAudiences`.
 
-**Solution:**
+**Solution:** Use `ValidAudiences` via the `configureJwtBearer` callback, and leave `Audience` unset in `appsettings.json` (omit the key or leave it empty). The SDK accepts either a single `Audience` or `ValidAudiences` — configuring `ValidAudiences` is sufficient:
+
 ```csharp
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
+// appsettings.json — do NOT set "Audience" here when using ValidAudiences
+// {
+//   "Auth0": {
+//     "Domain": "your-tenant.auth0.com"
+//   }
+// }
+
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
     {
-        TokenValidationParameters = new TokenValidationParameters
+        jwt.TokenValidationParameters = new TokenValidationParameters
         {
             ValidAudiences = new[] // ✅ Use ValidAudiences for multiple
             {
                 "https://api1.example.com",
                 "https://api2.example.com"
             }
-        }
-    };
-});
+        };
+    });
 ```
 
 ---
@@ -1623,14 +1615,15 @@ app.Run();
 **Solution:**
 ```csharp
 // Option 1: Set default scheme explicitly
+builder.Services.Configure<Auth0ApiOptions>(
+    "Auth0",
+    builder.Configuration.GetSection("Auth0"));
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = "Auth0";
     options.DefaultChallengeScheme = "Auth0";
-}).AddAuth0ApiAuthentication("Auth0", options =>
-{
-    // ... configuration
-});
+}).AddAuth0ApiAuthentication("Auth0");
 
 // Option 2: Specify scheme in authorization
 app.MapGet("/api/protected", () => "Protected")
@@ -1682,7 +1675,44 @@ Even though you're using `Auth0.AspNetCore.Authentication.Api`, you still need t
 
 ---
 
-### 10. Configuration Values Are Null
+### 10. Scoped Service Captured in configureJwtBearer Callback
+
+**Symptom:** Stale data, `ObjectDisposedException`, or cross-request state leakage.
+
+**Cause:** The `configureJwtBearer` delegate is held in a singleton (`IConfigureNamedOptions<JwtBearerOptions>`). Closing over a scoped service (e.g., `DbContext`) captures it for the entire application lifetime.
+
+**Solution:**
+```csharp
+// ❌ BAD — scoped service captured in singleton-lifetime delegate
+var dbContext = sp.GetRequiredService<MyDbContext>();
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
+    {
+        jwt.Audience = dbContext.GetAudience(); // captive dependency!
+    });
+
+// ✅ CORRECT — resolve scoped services inside event handlers via RequestServices
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
+    {
+        jwt.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = context =>
+            {
+                var db = context.HttpContext.RequestServices
+                    .GetRequiredService<MyDbContext>();
+                // safe — resolved per-request
+                return Task.CompletedTask;
+            }
+        };
+    });
+```
+
+---
+
+### 11. Configuration Values Are Null
 
 **Symptom:** `Auth0:Domain` or `Auth0:Audience` configuration returns null.
 
@@ -1759,11 +1789,11 @@ When reporting an issue, please include:
 - [ ] Package installed: `dotnet add package Auth0.AspNetCore.Authentication.Api`
 - [ ] Using statement added: `using Auth0.AspNetCore.Authentication.Api;`
 - [ ] Code updated: `AddJwtBearer()` → `AddAuth0ApiAuthentication()`
-- [ ] Domain configured: `options.Domain = "..."`
-- [ ] JWT options nested: `options.JwtBearerOptions = new JwtBearerOptions { ... }`
-- [ ] Custom events moved (if any): `options.JwtBearerOptions.Events = ...`
-- [ ] Custom validation moved (if any): `options.JwtBearerOptions.TokenValidationParameters = ...`
-- [ ] Configuration file updated (if needed): `appsettings.json`
+- [ ] Configuration section passed: `builder.Configuration.GetSection("Auth0")`
+- [ ] Advanced options moved (if any): Use `configureJwtBearer:` callback for `TokenValidationParameters`, `Events`, etc.
+- [ ] Custom events moved (if any): Inside `configureJwtBearer: jwt => { jwt.Events = ...; }`
+- [ ] Custom validation moved (if any): Inside `configureJwtBearer: jwt => { jwt.TokenValidationParameters = ...; }`
+- [ ] Configuration file updated (if needed): `appsettings.json` with Domain and Audience
 
 ### Build & Local Testing
 - [ ] Clean build successful: `dotnet clean && dotnet build`

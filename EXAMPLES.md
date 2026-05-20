@@ -10,6 +10,7 @@ This document provides practical, copy-pastable code examples for common scenari
    - 1.3 [Protecting Controller Endpoints](#13-protecting-controller-endpoints)
 2. **Configuration**
    - 2.1 [Custom Token Validation Parameters](#21-custom-token-validation-parameters)
+   - 2.2 [Programmatic Configuration with JWT Bearer Customization](#22-programmatic-configuration-with-jwt-bearer-customization)
 3. **DPoP (Demonstration of Proof-of-Possession)**
    - 3.1 [Enabling DPoP with Default Settings](#31-enabling-dpop-with-default-settings)
    - 3.2 [DPoP in Allowed Mode (Gradual Adoption)](#32-dpop-in-allowed-mode-gradual-adoption)
@@ -42,19 +43,12 @@ Basic setup for Auth0 JWT authentication in a minimal API.
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add Auth0 JWT authentication
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-});
+// Add Auth0 JWT authentication — binds from appsettings.json "Auth0" section
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"));
 
 builder.Services.AddAuthorization();
 
@@ -76,18 +70,11 @@ Protect endpoints using `RequireAuthorization()` in minimal APIs.
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-});
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"));
 
 builder.Services.AddAuthorization();
 
@@ -124,20 +111,13 @@ Protect endpoints using `[Authorize]` attribute in controllers.
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-});
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"));
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
@@ -197,16 +177,14 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
     {
-        Audience = builder.Configuration["Auth0:Audience"],
-        RequireHttpsMetadata = true,
-        SaveToken = true,
+        jwt.RequireHttpsMetadata = true;
+        jwt.SaveToken = true;
         
-        TokenValidationParameters = new TokenValidationParameters
+        jwt.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
             ValidateIssuer = true,
@@ -215,9 +193,8 @@ builder.Services.AddAuth0ApiAuthentication(options =>
             ClockSkew = TimeSpan.FromMinutes(5),
             NameClaimType = "name",
             RoleClaimType = "https://schemas.auth0.com/roles"
-        }
-    };
-});
+        };
+    });
 
 builder.Services.AddAuthorization();
 
@@ -227,6 +204,51 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGet("/api/protected", () => Results.Ok(new { message = "Token validated with custom parameters" }))
+    .RequireAuthorization();
+
+app.Run();
+```
+
+---
+
+### 2.2 Programmatic Configuration with JWT Bearer Customization
+
+Configure Auth0 options programmatically using a delegate while also customizing the underlying JWT Bearer options. This is useful when configuration values are not in `appsettings.json` (e.g., from a secrets manager or computed at startup).
+
+```csharp
+using Auth0.AspNetCore.Authentication.Api;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuth0ApiAuthentication(
+    options =>
+    {
+        options.Domain = "your-tenant.auth0.com";
+        options.Audience = "https://your-api-identifier";
+    },
+    configureJwtBearer: jwt =>
+    {
+        jwt.SaveToken = true;
+        jwt.RequireHttpsMetadata = true;
+        jwt.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine($"Auth failed: {context.Exception.Message}");
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+builder.Services.AddAuthorization();
+
+var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapGet("/api/protected", () => Results.Ok(new { message = "Authenticated" }))
     .RequireAuthorization();
 
 app.Run();
@@ -244,18 +266,12 @@ Enable DPoP with a single method call - accepts both DPoP and Bearer tokens.
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-}).WithDPoP(); // ✨ Enable DPoP with default settings (Allowed mode)
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"))
+.WithDPoP(); // ✨ Enable DPoP with default settings (Allowed mode)
 
 builder.Services.AddAuthorization();
 
@@ -288,18 +304,12 @@ Use Allowed mode to gradually adopt DPoP without breaking existing clients using
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
 using Auth0.AspNetCore.Authentication.Api.DPoP;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-}).WithDPoP(dpopOptions =>
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"))
+.WithDPoP(dpopOptions =>
 {
     // Explicitly set to Allowed mode (this is the default)
     dpopOptions.Mode = DPoPModes.Allowed;
@@ -344,18 +354,12 @@ Use Required mode when you want maximum security - only DPoP tokens are accepted
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
 using Auth0.AspNetCore.Authentication.Api.DPoP;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-}).WithDPoP(dpopOptions =>
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"))
+.WithDPoP(dpopOptions =>
 {
     // Only accept DPoP tokens, reject Bearer tokens
     dpopOptions.Mode = DPoPModes.Required;
@@ -392,17 +396,11 @@ Configure a static list of allowed Auth0 custom domains when they are known at a
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
 using Auth0.AspNetCore.Authentication.Api.CustomDomains;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-})
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"))
 .WithCustomDomains(options =>
 {
     // Static list of allowed Auth0 custom domains
@@ -448,20 +446,14 @@ Resolve allowed domains dynamically at runtime based on request context, databas
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
 using Auth0.AspNetCore.Authentication.Api.CustomDomains;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Register a tenant service for domain resolution
 builder.Services.AddSingleton<ITenantService, TenantService>();
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-})
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"))
 .WithCustomDomains(options =>
 {
     // Dynamic domain resolution using request context
@@ -522,17 +514,11 @@ The cache is keyed by the OIDC metadata endpoint URL (e.g., `https://brand-1.cus
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
 using Auth0.AspNetCore.Authentication.Api.CustomDomains;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-})
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"))
 .WithCustomDomains(options =>
 {
     options.Domains = new[]
@@ -635,20 +621,13 @@ Validate scopes from Auth0 access tokens using authorization policies.
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-});
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"));
 
 // Define scope-based authorization policies
 builder.Services.AddAuthorization(options =>
@@ -723,20 +702,13 @@ Validate Auth0 permissions using custom authorization policies.
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-});
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"));
 
 // Define permission-based authorization policies
 builder.Services.AddAuthorization(options =>
@@ -799,20 +771,13 @@ Create a reusable authorization handler for scope validation.
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-});
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"));
 
 // Register custom authorization handler
 builder.Services.AddSingleton<IAuthorizationHandler, HasScopeHandler>();
@@ -906,18 +871,15 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
     {
-        Audience = builder.Configuration["Auth0:Audience"],
-        TokenValidationParameters = new TokenValidationParameters
+        jwt.TokenValidationParameters = new TokenValidationParameters
         {
             RoleClaimType = "https://schemas.auth0.com/roles"
-        }
-    };
-});
+        };
+    });
 
 builder.Services.AddAuthorization(options =>
 {
@@ -968,20 +930,13 @@ Access and use user claims from Auth0 tokens.
 
 ```csharp
 using Auth0.AspNetCore.Authentication.Api;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
-    {
-        Audience = builder.Configuration["Auth0:Audience"]
-    };
-});
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"));
 
 builder.Services.AddAuthorization();
 
@@ -1024,13 +979,11 @@ using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
     {
-        Audience = builder.Configuration["Auth0:Audience"],
-        Events = new JwtBearerEvents
+        jwt.Events = new JwtBearerEvents
         {
             OnTokenValidated = context =>
             {
@@ -1082,9 +1035,8 @@ builder.Services.AddAuth0ApiAuthentication(options =>
                 
                 return Task.CompletedTask;
             }
-        }
-    };
-});
+        };
+    });
 
 builder.Services.AddAuthorization();
 
@@ -1115,13 +1067,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
     {
-        Audience = builder.Configuration["Auth0:Audience"],
-        Events = new JwtBearerEvents
+        jwt.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
@@ -1138,9 +1088,8 @@ builder.Services.AddAuth0ApiAuthentication(options =>
                 
                 return Task.CompletedTask;
             }
-        }
-    };
-});
+        };
+    });
 
 builder.Services.AddAuthorization();
 
@@ -1177,13 +1126,11 @@ using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
     {
-        Audience = builder.Configuration["Auth0:Audience"],
-        Events = new JwtBearerEvents
+        jwt.Events = new JwtBearerEvents
         {
             OnChallenge = context =>
             {
@@ -1218,9 +1165,8 @@ builder.Services.AddAuth0ApiAuthentication(options =>
                 
                 return Task.CompletedTask;
             }
-        }
-    };
-});
+        };
+    });
 
 builder.Services.AddAuthorization();
 
@@ -1252,13 +1198,11 @@ using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuth0ApiAuthentication(options =>
-{
-    options.Domain = builder.Configuration["Auth0:Domain"];
-    options.JwtBearerOptions = new JwtBearerOptions
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"),
+    configureJwtBearer: jwt =>
     {
-        Audience = builder.Configuration["Auth0:Audience"],
-        Events = new JwtBearerEvents
+        jwt.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
@@ -1274,9 +1218,8 @@ builder.Services.AddAuth0ApiAuthentication(options =>
                 
                 return Task.CompletedTask;
             }
-        }
-    };
-});
+        };
+    });
 
 builder.Services.AddAuthorization();
 builder.Services.AddSignalR();

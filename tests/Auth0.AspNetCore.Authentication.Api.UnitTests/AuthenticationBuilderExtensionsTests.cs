@@ -1,11 +1,8 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Protocols;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Auth0.AspNetCore.Authentication.Api.UnitTests;
 
@@ -20,215 +17,284 @@ public class AuthenticationBuilderExtensionsTest
         _authenticationBuilder = new AuthenticationBuilder(_services);
     }
 
-    #region ValidateAuth0ApiOptionsTests
+    #region Auth0ApiOptionsValidatorTests
 
     [Fact]
-    public void ValidateAuth0ApiOptions_ShouldNotThrow_When_Domain_And_Audience_Are_Set()
+    public void Auth0ApiOptionsValidator_ShouldSucceed_When_Domain_Is_Set()
     {
         // Arrange
-        var options = new Auth0ApiOptions
-        {
-            Domain = "example.auth0.com",
-            JwtBearerOptions = new JwtBearerOptions
-            {
-                Audience = "https://api.example.com"
-            }
-        };
+        var validator = new Auth0ApiOptionsValidator();
+        var options = new Auth0ApiOptions { Domain = "example.auth0.com" };
 
         // Act
-        Action act = () => AuthenticationBuilderExtensions.ValidateAuth0ApiOptions(options);
+        ValidateOptionsResult result = validator.Validate(null, options);
 
         // Assert
-        act.Should().NotThrow();
+        result.Succeeded.Should().BeTrue();
     }
 
     [Theory]
-    [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void ValidateAuth0ApiOptions_ShouldThrow_When_Domain_Is_Null_Or_WhiteSpace(string? domain)
+    public void Auth0ApiOptionsValidator_ShouldFail_When_Domain_Is_Empty_Or_WhiteSpace(string domain)
     {
         // Arrange
-        var options = new Auth0ApiOptions
-        {
-            Domain = domain,
-            JwtBearerOptions = new JwtBearerOptions
-            {
-                Audience = "https://api.example.com"
-            }
-        };
+        var validator = new Auth0ApiOptionsValidator();
+        var options = new Auth0ApiOptions { Domain = domain };
 
         // Act
-        Action act = () => AuthenticationBuilderExtensions.ValidateAuth0ApiOptions(options);
+        ValidateOptionsResult result = validator.Validate(null, options);
 
         // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("Auth0 Domain is required. Please set the Domain property in Auth0ApiOptions.");
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle(f => f.Contains("Domain"));
+    }
+
+    [Fact]
+    public void Auth0ApiOptionsValidator_ShouldSucceed_Regardless_Of_Audience()
+    {
+        // Audience is validated separately on JwtBearerOptions; Auth0ApiOptionsValidator
+        // only enforces Domain.
+        var validator = new Auth0ApiOptionsValidator();
+        var options = new Auth0ApiOptions { Domain = "example.auth0.com", Audience = string.Empty };
+
+        ValidateOptionsResult result = validator.Validate(null, options);
+
+        result.Succeeded.Should().BeTrue();
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void ValidateAuth0ApiOptions_ShouldThrow_When_Audience_Is_Null_Or_WhiteSpace(string? audience)
+    [InlineData("https://tenant.auth0.com")]
+    [InlineData("http://tenant.auth0.com")]
+    [InlineData("HTTPS://tenant.auth0.com")]
+    public void Auth0ApiOptionsValidator_ShouldFail_When_Domain_Contains_Scheme(string domain)
     {
-        // Arrange
-        var options = new Auth0ApiOptions
-        {
-            Domain = "example.auth0.com",
-            JwtBearerOptions = new JwtBearerOptions
-            {
-                Audience = audience
-            }
-        };
+        var validator = new Auth0ApiOptionsValidator();
+        var options = new Auth0ApiOptions { Domain = domain };
 
-        // Act
-        Action act = () => AuthenticationBuilderExtensions.ValidateAuth0ApiOptions(options);
+        ValidateOptionsResult result = validator.Validate(null, options);
 
-        // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("Auth0 Audience is required. Please set the Audience property in Auth0ApiOptions.");
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle(f => f.Contains("hostname only"));
+    }
+
+    [Theory]
+    [InlineData("tenant.auth0.com/path")]
+    [InlineData("tenant.auth0.com/some/path")]
+    public void Auth0ApiOptionsValidator_ShouldFail_When_Domain_Contains_Path(string domain)
+    {
+        var validator = new Auth0ApiOptionsValidator();
+        var options = new Auth0ApiOptions { Domain = domain };
+
+        ValidateOptionsResult result = validator.Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle(f => f.Contains("hostname only"));
+    }
+
+    [Theory]
+    [InlineData("tenant.auth0.com:443")]
+    [InlineData("tenant.auth0.com:8080")]
+    public void Auth0ApiOptionsValidator_ShouldFail_When_Domain_Contains_Port(string domain)
+    {
+        var validator = new Auth0ApiOptionsValidator();
+        var options = new Auth0ApiOptions { Domain = domain };
+
+        ValidateOptionsResult result = validator.Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle(f => f.Contains("port"));
+    }
+
+    [Theory]
+    [InlineData("tenant.auth0.com?q=1")]
+    [InlineData("tenant.auth0.com#fragment")]
+    public void Auth0ApiOptionsValidator_ShouldFail_When_Domain_Contains_QueryOrFragment(string domain)
+    {
+        var validator = new Auth0ApiOptionsValidator();
+        var options = new Auth0ApiOptions { Domain = domain };
+
+        ValidateOptionsResult result = validator.Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle(f => f.Contains("hostname only"));
+    }
+
+    [Theory]
+    [InlineData("tenant auth0.com")]
+    [InlineData("tenant\tauth0.com")]
+    public void Auth0ApiOptionsValidator_ShouldFail_When_Domain_Contains_Whitespace(string domain)
+    {
+        var validator = new Auth0ApiOptionsValidator();
+        var options = new Auth0ApiOptions { Domain = domain };
+
+        ValidateOptionsResult result = validator.Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("tenant.us.auth0.com")]
+    [InlineData("my-tenant.auth0.com")]
+    [InlineData("example.com")]
+    [InlineData("tenant.auth0.com/")]
+    public void Auth0ApiOptionsValidator_ShouldSucceed_For_Valid_Domain(string domain)
+    {
+        var validator = new Auth0ApiOptionsValidator();
+        var options = new Auth0ApiOptions { Domain = domain };
+
+        ValidateOptionsResult result = validator.Validate(null, options);
+
+        result.Succeeded.Should().BeTrue();
     }
 
     #endregion
 
-    #region ConfigureJwtBearerOptionsTests
+    #region Auth0JwtBearerOptionsValidatorTests
 
     [Fact]
-    public void ConfigureJwtBearerOptions_With_Null_JwtBearerOptions_ThrowsArgumentNullException()
+    public void JwtBearerOptionsValidator_ShouldSucceed_When_Audience_Is_Set()
     {
         // Arrange
-        JwtBearerOptions? jwtBearerOptions = null;
-        var auth0Options = new Auth0ApiOptions();
-
-        // Act & Assert
-        Action action = () => AuthenticationBuilderExtensions.ConfigureJwtBearerOptions(jwtBearerOptions, auth0Options);
-        action.Should().Throw<ArgumentNullException>().WithParameterName("jwtBearerOptions");
-    }
-
-    [Fact]
-    public void ConfigureJwtBearerOptions_With_Null_Auth0Options_Throws_ArgumentNullException()
-    {
-        // Arrange
-        var jwtBearerOptions = new JwtBearerOptions();
-        Auth0ApiOptions? auth0Options = null;
-
-        // Act & Assert
-        Action action = () => AuthenticationBuilderExtensions.ConfigureJwtBearerOptions(jwtBearerOptions, auth0Options);
-        action.Should().Throw<ArgumentNullException>().WithParameterName("auth0ApiOptions");
-    }
-
-    [Fact]
-    public void ConfigureJwtBearerOptions_With_Valid_Options_Configures_All()
-    {
-        // Arrange
-        var jwtBearerOptions = new JwtBearerOptions();
-        var customConfiguration = new OpenIdConnectConfiguration();
-        var customConfigurationManager =
-            new ConfigurationManager<OpenIdConnectConfiguration>("https://test.com",
-                new OpenIdConnectConfigurationRetriever());
-        var customHandler = new HttpClientHandler();
-        var customBackchannel = new HttpClient();
-        Func<HttpContext, string> customSelector = _ => "custom";
-        var customTokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = false,
-            ValidateAudience = false
-        };
-        var auth0Options = new Auth0ApiOptions
-        {
-            Domain = "test.auth0.com",
-            JwtBearerOptions = new JwtBearerOptions
-            {
-                Audience = "test-audience",
-                ClaimsIssuer = "test-issuer",
-                Challenge = "test-challenge",
-                SaveToken = true,
-                IncludeErrorDetails = true,
-                RequireHttpsMetadata = false,
-                MetadataAddress = "https://test.com/.well-known/openid_configuration",
-                RefreshOnIssuerKeyNotFound = false,
-                MapInboundClaims = false,
-                BackchannelTimeout = TimeSpan.FromSeconds(30),
-                AutomaticRefreshInterval = TimeSpan.FromHours(1),
-                RefreshInterval = TimeSpan.FromMinutes(30),
-                UseSecurityTokenValidators = true,
-                ForwardDefault = "Default",
-                ForwardAuthenticate = "Authenticate",
-                ForwardChallenge = "Challenge",
-                ForwardForbid = "Forbid",
-                ForwardSignIn = "SignIn",
-                ForwardSignOut = "SignOut",
-                Events = new JwtBearerEvents(),
-                Configuration = customConfiguration,
-                ConfigurationManager = customConfigurationManager,
-                BackchannelHttpHandler = customHandler,
-                Backchannel = customBackchannel,
-                ForwardDefaultSelector = customSelector,
-                TokenValidationParameters = customTokenValidationParameters
-            }
-        };
+        var validator = new Auth0JwtBearerOptionsValidator("Auth0");
+        var options = new JwtBearerOptions { Audience = "https://api.example.com" };
 
         // Act
-        AuthenticationBuilderExtensions.ConfigureJwtBearerOptions(jwtBearerOptions, auth0Options);
+        ValidateOptionsResult result = validator.Validate("Auth0", options);
+
+        // Assert
+        result.Succeeded.Should().BeTrue();
+    }
+
+    [Fact]
+    public void JwtBearerOptionsValidator_ShouldSucceed_When_ValidAudiences_Is_Set()
+    {
+        // This is the multi-audience scenario — Audience is empty but ValidAudiences covers it.
+        var validator = new Auth0JwtBearerOptionsValidator("Auth0");
+        var options = new JwtBearerOptions();
+        options.TokenValidationParameters.ValidAudiences = ["https://api1.example.com", "https://api2.example.com"];
+
+        ValidateOptionsResult result = validator.Validate("Auth0", options);
+
+        result.Succeeded.Should().BeTrue();
+    }
+
+    [Fact]
+    public void JwtBearerOptionsValidator_ShouldFail_When_Neither_Audience_Nor_ValidAudiences_Is_Set()
+    {
+        // Arrange
+        var validator = new Auth0JwtBearerOptionsValidator("Auth0");
+        var options = new JwtBearerOptions();
+
+        // Act
+        ValidateOptionsResult result = validator.Validate("Auth0", options);
+
+        // Assert
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle(f => f.Contains("Audience"));
+    }
+
+    [Fact]
+    public void JwtBearerOptionsValidator_ShouldSkip_For_Different_Scheme()
+    {
+        // Should not interfere with JwtBearerOptions registered for a different scheme.
+        var validator = new Auth0JwtBearerOptionsValidator("Auth0");
+        var options = new JwtBearerOptions(); // no audience
+
+        ValidateOptionsResult result = validator.Validate("SomeOtherScheme", options);
+
+        result.Skipped.Should().BeTrue();
+    }
+
+    [Fact]
+    public void JwtBearerOptionsValidator_ShouldFail_When_EventsType_Is_Set()
+    {
+        // EventsType takes precedence over Events at runtime in ASP.NET Core,
+        // which would silently bypass the SDK's event handler chain (DPoP, custom domains).
+        var validator = new Auth0JwtBearerOptionsValidator("Auth0");
+        var options = new JwtBearerOptions
+        {
+            Audience = "https://api.example.com",
+            EventsType = typeof(JwtBearerEvents)
+        };
+
+        ValidateOptionsResult result = validator.Validate("Auth0", options);
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle(f => f.Contains("EventsType"));
+    }
+
+    #endregion
+
+    #region Auth0JwtBearerConfigureOptionsTests
+
+    [Fact]
+    public void Auth0JwtBearerConfigureOptions_Sets_Authority_And_Audience_From_Auth0Options()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.Configure<Auth0ApiOptions>("Auth0", opts =>
+        {
+            opts.Domain = "test.auth0.com";
+            opts.Audience = "test-audience";
+        });
+        var sp = services.BuildServiceProvider();
+
+        var configurator = new Auth0JwtBearerConfigureOptions(
+            "Auth0",
+            sp.GetRequiredService<IOptionsMonitor<Auth0ApiOptions>>(),
+            configureJwtBearer: null);
+        var jwtBearerOptions = new JwtBearerOptions();
+
+        // Act
+        configurator.Configure("Auth0", jwtBearerOptions);
 
         // Assert
         jwtBearerOptions.Authority.Should().Be("https://test.auth0.com");
         jwtBearerOptions.Audience.Should().Be("test-audience");
-        jwtBearerOptions.ClaimsIssuer.Should().Be("test-issuer");
-        jwtBearerOptions.Challenge.Should().Be("test-challenge");
-        jwtBearerOptions.SaveToken.Should().BeTrue();
-        jwtBearerOptions.IncludeErrorDetails.Should().BeTrue();
-        jwtBearerOptions.RequireHttpsMetadata.Should().BeFalse();
-        jwtBearerOptions.MetadataAddress.Should().Be("https://test.com/.well-known/openid_configuration");
-        jwtBearerOptions.RefreshOnIssuerKeyNotFound.Should().BeFalse();
-        jwtBearerOptions.MapInboundClaims.Should().BeFalse();
-        jwtBearerOptions.BackchannelTimeout.Should().Be(TimeSpan.FromSeconds(30));
-        jwtBearerOptions.AutomaticRefreshInterval.Should().Be(TimeSpan.FromHours(1));
-        jwtBearerOptions.RefreshInterval.Should().Be(TimeSpan.FromMinutes(30));
-        jwtBearerOptions.UseSecurityTokenValidators.Should().BeTrue();
-        jwtBearerOptions.ForwardDefault.Should().Be("Default");
-        jwtBearerOptions.ForwardAuthenticate.Should().Be("Authenticate");
-        jwtBearerOptions.ForwardChallenge.Should().Be("Challenge");
-        jwtBearerOptions.ForwardForbid.Should().Be("Forbid");
-        jwtBearerOptions.ForwardSignIn.Should().Be("SignIn");
-        jwtBearerOptions.ForwardSignOut.Should().Be("SignOut");
-        jwtBearerOptions.Events.Should().NotBeNull();
-        jwtBearerOptions.ConfigurationManager.Should().Be(customConfigurationManager);
-        jwtBearerOptions.Configuration.Should().Be(customConfiguration);
-        jwtBearerOptions.BackchannelHttpHandler.Should().Be(customHandler);
-        jwtBearerOptions.Backchannel.Should().Be(customBackchannel);
-        jwtBearerOptions.ForwardDefaultSelector.Should().Be(customSelector);
-        jwtBearerOptions.TokenValidationParameters.Should().Be(customTokenValidationParameters);
     }
 
     [Fact]
-    public void ConfigureJwtBearerOptions_With_Default_Values_Configures_Correctly()
+    public void Auth0JwtBearerConfigureOptions_Applies_ConfigureJwtBearer_Callback()
     {
-        // Arrange
-        var jwtBearerOptions = new JwtBearerOptions();
-        var auth0Options = new Auth0ApiOptions
+        // The user's callback runs after Domain/Audience are applied, so it can override them.
+        var services = new ServiceCollection();
+        services.Configure<Auth0ApiOptions>("Auth0", opts =>
         {
-            Domain = "test.auth0.com",
-            JwtBearerOptions = new JwtBearerOptions
-            {
-                Audience = "test-audience"
-            }
-        };
+            opts.Domain = "test.auth0.com";
+            opts.Audience = "from-options";
+        });
+        var sp = services.BuildServiceProvider();
 
-        // Act
-        AuthenticationBuilderExtensions.ConfigureJwtBearerOptions(jwtBearerOptions, auth0Options);
+        var configurator = new Auth0JwtBearerConfigureOptions(
+            "Auth0",
+            sp.GetRequiredService<IOptionsMonitor<Auth0ApiOptions>>(),
+            configureJwtBearer: jwt => jwt.Audience = "overridden-by-callback");
+        var jwtBearerOptions = new JwtBearerOptions();
 
-        // Assert
-        jwtBearerOptions.Authority.Should().Be("https://test.auth0.com");
-        jwtBearerOptions.Audience.Should().Be("test-audience");
-        jwtBearerOptions.ClaimsIssuer.Should().BeNull();
-        jwtBearerOptions.Challenge.Should().Be("Bearer");
-        jwtBearerOptions.SaveToken.Should().BeTrue();
-        jwtBearerOptions.IncludeErrorDetails.Should().BeTrue();
-        jwtBearerOptions.RequireHttpsMetadata.Should().BeTrue();
-        jwtBearerOptions.RefreshOnIssuerKeyNotFound.Should().BeTrue();
-        jwtBearerOptions.MapInboundClaims.Should().BeTrue();
+        configurator.Configure("Auth0", jwtBearerOptions);
+
+        jwtBearerOptions.Audience.Should().Be("overridden-by-callback");
+    }
+
+    [Fact]
+    public void Auth0JwtBearerConfigureOptions_SkipsOtherSchemes()
+    {
+        // Should not modify JwtBearerOptions for a scheme it doesn't own.
+        var services = new ServiceCollection();
+        services.Configure<Auth0ApiOptions>("Auth0", opts => { opts.Domain = "test.auth0.com"; opts.Audience = "test"; });
+        var sp = services.BuildServiceProvider();
+
+        var configurator = new Auth0JwtBearerConfigureOptions(
+            "Auth0",
+            sp.GetRequiredService<IOptionsMonitor<Auth0ApiOptions>>(),
+            configureJwtBearer: null);
+        var jwtBearerOptions = new JwtBearerOptions();
+
+        configurator.Configure("SomeOtherScheme", jwtBearerOptions);
+
+        jwtBearerOptions.Authority.Should().BeNull();
+        jwtBearerOptions.Audience.Should().BeNull();
     }
 
     #endregion
@@ -243,45 +309,25 @@ public class AuthenticationBuilderExtensionsTest
     public void AddAuth0ApiAuthentication_With_Invalid_AuthenticationScheme_Should_Throw_ArgumentException(
         string scheme)
     {
-        // Arrange
-        Action<Auth0ApiOptions> configureOptions = opts =>
-        {
-            opts.Domain = "test.auth0.com";
-            opts.JwtBearerOptions = new JwtBearerOptions
-            {
-                Audience = "test-audience"
-            };
-        };
-
         // Act & Assert
         ArgumentException exception = Assert.Throws<ArgumentException>(() =>
-            _authenticationBuilder.AddAuth0ApiAuthentication(scheme, configureOptions));
+            _authenticationBuilder.AddAuth0ApiAuthentication(scheme));
 
         exception.ParamName.Should().Be("authenticationScheme");
     }
 
     [Fact]
-    public void AddAuth0ApiAuthentication_With_Null_ConfigureOptions_Should_ThrowArgumentNullException()
-    {
-        // Act & Assert
-        ArgumentNullException exception = Assert.Throws<ArgumentNullException>(() =>
-            _authenticationBuilder.AddAuth0ApiAuthentication(null));
-
-        exception.ParamName.Should().Be("configureOptions");
-    }
-
-    [Fact]
     public void AddAuth0ApiAuthentication_Should_Register_Configuration_Successfully()
     {
-        // Arrange & Act
-        _authenticationBuilder.AddAuth0ApiAuthentication(opts =>
+        // Arrange
+        _services.Configure<Auth0ApiOptions>(Auth0Constants.AuthenticationScheme.Auth0, opts =>
         {
             opts.Domain = "test.auth0.com";
-            opts.JwtBearerOptions = new JwtBearerOptions
-            {
-                Audience = "test-audience"
-            };
+            opts.Audience = "test-audience";
         });
+
+        // Act
+        _authenticationBuilder.AddAuth0ApiAuthentication();
 
         // Assert
         ServiceProvider serviceProvider = _services.BuildServiceProvider();
@@ -290,7 +336,7 @@ public class AuthenticationBuilderExtensionsTest
         Auth0ApiOptions options = optionsMonitor.Get(Auth0Constants.AuthenticationScheme.Auth0);
 
         options.Domain.Should().Be("test.auth0.com");
-        options.JwtBearerOptions?.Audience.Should().Be("test-audience");
+        options.Audience.Should().Be("test-audience");
 
         // Assert for IPostConfigureOptions<JwtBearerOptions> registration
         ServiceDescriptor? serviceDescriptor = _services.FirstOrDefault(s =>
@@ -298,7 +344,200 @@ public class AuthenticationBuilderExtensionsTest
             s.ImplementationType == typeof(Auth0JwtBearerPostConfigureOptions));
 
         serviceDescriptor.Should().NotBeNull();
-        serviceDescriptor.Lifetime.Should().Be(ServiceLifetime.Singleton);
+        serviceDescriptor!.Lifetime.Should().Be(ServiceLifetime.Singleton);
+    }
+
+    [Fact]
+    public void AddAuth0ApiAuthentication_Should_Register_Auth0ApiOptions_Validator()
+    {
+        // Arrange
+        _services.Configure<Auth0ApiOptions>(Auth0Constants.AuthenticationScheme.Auth0, opts =>
+        {
+            opts.Domain = "test.auth0.com";
+            opts.Audience = "test-audience";
+        });
+
+        // Act
+        _authenticationBuilder.AddAuth0ApiAuthentication();
+
+        // Assert
+        ServiceDescriptor? validatorDescriptor = _services.FirstOrDefault(s =>
+            s.ServiceType == typeof(IValidateOptions<Auth0ApiOptions>));
+
+        validatorDescriptor.Should().NotBeNull();
+        validatorDescriptor!.ImplementationType.Should().Be(typeof(Auth0ApiOptionsValidator));
+    }
+
+    [Fact]
+    public void AddAuth0ApiAuthentication_Should_Register_JwtBearerOptions_Validator()
+    {
+        // Arrange
+        _services.Configure<Auth0ApiOptions>(Auth0Constants.AuthenticationScheme.Auth0, opts =>
+        {
+            opts.Domain = "test.auth0.com";
+            opts.Audience = "test-audience";
+        });
+
+        // Act
+        _authenticationBuilder.AddAuth0ApiAuthentication();
+
+        // Assert — an Auth0JwtBearerOptionsValidator instance is registered
+        ServiceDescriptor? validatorDescriptor = _services.FirstOrDefault(s =>
+            s.ServiceType == typeof(IValidateOptions<JwtBearerOptions>) &&
+            s.ImplementationInstance is Auth0JwtBearerOptionsValidator);
+
+        validatorDescriptor.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void AddAuth0ApiAuthentication_ConfigureJwtBearer_Registers_JwtBearerScheme()
+    {
+        // Arrange
+        _services.Configure<Auth0ApiOptions>(Auth0Constants.AuthenticationScheme.Auth0, opts =>
+        {
+            opts.Domain = "test.auth0.com";
+            opts.Audience = "test-audience";
+        });
+
+        // Act
+        Auth0ApiAuthenticationBuilder result = _authenticationBuilder.AddAuth0ApiAuthentication(configureJwtBearer: jwt =>
+        {
+            jwt.SaveToken = true;
+            jwt.RequireHttpsMetadata = false;
+        });
+
+        // Assert - the builder is returned with the correct scheme
+        result.Should().NotBeNull();
+        result.AuthenticationScheme.Should().Be(Auth0Constants.AuthenticationScheme.Auth0);
+
+        // Verify JwtBearer configuration was registered
+        ServiceDescriptor? jwtBearerDescriptor = _services.FirstOrDefault(s =>
+            s.ServiceType == typeof(IConfigureOptions<JwtBearerOptions>));
+        jwtBearerDescriptor.Should().NotBeNull();
+    }
+
+    #endregion
+
+    #region AddAuth0ApiAuthentication_WithConfigurationSection
+
+    [Fact]
+    public void AddAuth0ApiAuthentication_WithConfigurationSection_Should_Register_Options()
+    {
+        // Arrange
+        var configData = new Dictionary<string, string?>
+        {
+            { "Auth0:Domain", "test.auth0.com" },
+            { "Auth0:Audience", "https://api.example.com" }
+        };
+        IConfigurationSection section = new ConfigurationBuilder()
+            .AddInMemoryCollection(configData)
+            .Build()
+            .GetSection("Auth0");
+
+        // Act
+        Auth0ApiAuthenticationBuilder result = _authenticationBuilder.AddAuth0ApiAuthentication(section);
+
+        // Assert
+        result.AuthenticationScheme.Should().Be(Auth0Constants.AuthenticationScheme.Auth0);
+
+        ServiceProvider sp = _services.BuildServiceProvider();
+        var options = sp.GetRequiredService<IOptionsMonitor<Auth0ApiOptions>>()
+            .Get(Auth0Constants.AuthenticationScheme.Auth0);
+
+        options.Domain.Should().Be("test.auth0.com");
+        options.Audience.Should().Be("https://api.example.com");
+    }
+
+    [Fact]
+    public void AddAuth0ApiAuthentication_WithConfigurationSection_And_CustomScheme_Should_Register_Options()
+    {
+        // Arrange
+        var configData = new Dictionary<string, string?>
+        {
+            { "Auth0:Domain", "test.auth0.com" },
+            { "Auth0:Audience", "https://api.example.com" }
+        };
+        IConfigurationSection section = new ConfigurationBuilder()
+            .AddInMemoryCollection(configData)
+            .Build()
+            .GetSection("Auth0");
+
+        // Act
+        Auth0ApiAuthenticationBuilder result =
+            _authenticationBuilder.AddAuth0ApiAuthentication("CustomScheme", section);
+
+        // Assert
+        result.AuthenticationScheme.Should().Be("CustomScheme");
+
+        ServiceProvider sp = _services.BuildServiceProvider();
+        var options = sp.GetRequiredService<IOptionsMonitor<Auth0ApiOptions>>()
+            .Get("CustomScheme");
+
+        options.Domain.Should().Be("test.auth0.com");
+        options.Audience.Should().Be("https://api.example.com");
+    }
+
+    [Fact]
+    public void AddAuth0ApiAuthentication_WithConfigurationSection_Null_Should_Throw()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            _authenticationBuilder.AddAuth0ApiAuthentication((IConfigurationSection)null!));
+    }
+
+    #endregion
+
+    #region AddAuth0ApiAuthentication_WithConfigureOptions
+
+    [Fact]
+    public void AddAuth0ApiAuthentication_WithConfigureOptions_Should_Register_Options()
+    {
+        // Act
+        Auth0ApiAuthenticationBuilder result = _authenticationBuilder.AddAuth0ApiAuthentication(opts =>
+        {
+            opts.Domain = "test.auth0.com";
+            opts.Audience = "https://api.example.com";
+        });
+
+        // Assert
+        result.AuthenticationScheme.Should().Be(Auth0Constants.AuthenticationScheme.Auth0);
+
+        ServiceProvider sp = _services.BuildServiceProvider();
+        var options = sp.GetRequiredService<IOptionsMonitor<Auth0ApiOptions>>()
+            .Get(Auth0Constants.AuthenticationScheme.Auth0);
+
+        options.Domain.Should().Be("test.auth0.com");
+        options.Audience.Should().Be("https://api.example.com");
+    }
+
+    [Fact]
+    public void AddAuth0ApiAuthentication_WithConfigureOptions_And_CustomScheme_Should_Register_Options()
+    {
+        // Act
+        Auth0ApiAuthenticationBuilder result =
+            _authenticationBuilder.AddAuth0ApiAuthentication("CustomScheme", opts =>
+            {
+                opts.Domain = "test.auth0.com";
+                opts.Audience = "https://api.example.com";
+            });
+
+        // Assert
+        result.AuthenticationScheme.Should().Be("CustomScheme");
+
+        ServiceProvider sp = _services.BuildServiceProvider();
+        var options = sp.GetRequiredService<IOptionsMonitor<Auth0ApiOptions>>()
+            .Get("CustomScheme");
+
+        options.Domain.Should().Be("test.auth0.com");
+        options.Audience.Should().Be("https://api.example.com");
+    }
+
+    [Fact]
+    public void AddAuth0ApiAuthentication_WithConfigureOptions_Null_Should_Throw()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            _authenticationBuilder.AddAuth0ApiAuthentication((Action<Auth0ApiOptions>)null!));
     }
 
     #endregion
@@ -307,11 +546,13 @@ public class AuthenticationBuilderExtensionsTest
 
     private Auth0ApiAuthenticationBuilder CreateAuth0Builder()
     {
-        return _authenticationBuilder.AddAuth0ApiAuthentication(options =>
+        _services.Configure<Auth0ApiOptions>(Auth0Constants.AuthenticationScheme.Auth0, opts =>
         {
-            options.Domain = "tenant.auth0.com";
-            options.JwtBearerOptions = new JwtBearerOptions { Audience = "https://api.example.com" };
+            opts.Domain = "tenant.auth0.com";
+            opts.Audience = "https://api.example.com";
         });
+
+        return _authenticationBuilder.AddAuth0ApiAuthentication();
     }
 
     [Theory]

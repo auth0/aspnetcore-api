@@ -8,22 +8,20 @@ namespace Auth0.AspNetCore.Authentication.Api;
 internal abstract class JwtBearerEventsFactory
 {
     /// <summary>
-    ///     Creates a new instance of <see cref="JwtBearerEvents" /> and assigns event handlers
-    ///     based on the provided <paramref name="auth0Options" />
+    ///     Creates a new instance of <see cref="JwtBearerEvents" /> that wraps the existing user-configured events,
+    ///     ensuring they are preserved and called in sequence.
     /// </summary>
+    /// <param name="existingEvents">The existing event handlers configured by the user, or null.</param>
     /// <returns>A configured <see cref="JwtBearerEvents" /> instance.</returns>
-    /// <param name="auth0Options">The Auth0 API options containing custom event handlers.</param>
-    internal static JwtBearerEvents Create(Auth0ApiOptions? auth0Options)
+    internal static JwtBearerEvents Create(JwtBearerEvents? existingEvents)
     {
-        ArgumentNullException.ThrowIfNull(auth0Options);
-
         return new JwtBearerEvents
         {
-            OnTokenValidated = ProxyEvent(auth0Options.JwtBearerOptions?.Events?.OnTokenValidated),
-            OnAuthenticationFailed = ProxyEvent(auth0Options.JwtBearerOptions?.Events?.OnAuthenticationFailed),
-            OnMessageReceived = ProxyEvent(auth0Options.JwtBearerOptions?.Events?.OnMessageReceived),
-            OnChallenge = ProxyEvent(auth0Options.JwtBearerOptions?.Events?.OnChallenge),
-            OnForbidden = ProxyEvent(auth0Options.JwtBearerOptions?.Events?.OnForbidden)
+            OnTokenValidated = ProxyEvent(existingEvents?.OnTokenValidated),
+            OnAuthenticationFailed = ProxyEvent(existingEvents?.OnAuthenticationFailed),
+            OnMessageReceived = ProxyEvent(existingEvents?.OnMessageReceived),
+            OnChallenge = ProxyEvent(existingEvents?.OnChallenge),
+            OnForbidden = ProxyEvent(existingEvents?.OnForbidden)
         };
     }
 

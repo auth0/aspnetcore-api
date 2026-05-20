@@ -3,35 +3,30 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 namespace Auth0.AspNetCore.Authentication.Api.DPoP;
 
 /// <summary>
-///     Provides a factory for creating configured JwtBearerEvents instances
+///     Provides a factory for creating configured JwtBearerEvents instances with DPoP support.
 /// </summary>
 internal abstract class DPoPEventsFactory
 {
     /// <summary>
-    ///     Creates a new instance of <see cref="JwtBearerEvents" /> and assigns event handlers
-    ///     based on the provided <paramref name="auth0Options" />.
+    ///     Creates a new instance of <see cref="JwtBearerEvents" /> that wraps existing event handlers
+    ///     with DPoP-specific logic, preserving the original event chain.
     /// </summary>
-    /// <param name="auth0Options">The Auth0 API options containing custom event handlers.</param>
-    /// <returns>A configured <see cref="JwtBearerEvents" /> instance with integrated event handlers.</returns>
-    /// <exception cref="ArgumentNullException">
-    ///     Thrown if either <paramref name="auth0Options" /> is null.
-    /// </exception>
-    internal static JwtBearerEvents Create(Auth0ApiOptions? auth0Options)
+    /// <param name="existingEvents">The existing event handlers (user-configured or from prior layers), or null.</param>
+    /// <returns>A configured <see cref="JwtBearerEvents" /> instance with integrated DPoP event handlers.</returns>
+    internal static JwtBearerEvents Create(JwtBearerEvents? existingEvents)
     {
-        ArgumentNullException.ThrowIfNull(auth0Options);
-
         var dPoPEventHandlers = new DPoPEventHandlers();
         return new JwtBearerEvents
         {
             OnMessageReceived =
-                ProxyEvent(auth0Options.JwtBearerOptions?.Events?.OnMessageReceived,
+                ProxyEvent(existingEvents?.OnMessageReceived,
                     dPoPEventHandlers.HandleOnMessageReceived()),
-            OnTokenValidated = ProxyEvent(auth0Options.JwtBearerOptions?.Events?.OnTokenValidated,
+            OnTokenValidated = ProxyEvent(existingEvents?.OnTokenValidated,
                 dPoPEventHandlers.HandleOnTokenValidated()),
-            OnAuthenticationFailed = ProxyEvent(auth0Options.JwtBearerOptions?.Events?.OnAuthenticationFailed),
-            OnChallenge = ProxyEvent(auth0Options.JwtBearerOptions?.Events?.OnChallenge,
+            OnAuthenticationFailed = ProxyEvent(existingEvents?.OnAuthenticationFailed),
+            OnChallenge = ProxyEvent(existingEvents?.OnChallenge,
                 dPoPEventHandlers.HandleOnChallenge()),
-            OnForbidden = ProxyEvent(auth0Options.JwtBearerOptions?.Events?.OnForbidden)
+            OnForbidden = ProxyEvent(existingEvents?.OnForbidden)
         };
     }
 
