@@ -12,7 +12,7 @@ namespace Auth0.AspNetCore.Authentication.Api.DPoP.EventHandlers;
 /// Handles JWT Bearer challenge events for DPoP authentication scenarios.
 /// Generates appropriate WWW-Authenticate headers based on DPoP mode and error conditions.
 /// </summary>
-public class ChallengeHandler : DPoPEventHandlerBase, IDPoPEventHandler<JwtBearerChallengeContext>
+internal class ChallengeHandler : DPoPEventHandlerBase, IDPoPEventHandler<JwtBearerChallengeContext>
 {
     private static readonly string DefaultDPoPHeader = $"DPoP {Auth0Constants.DPoP.Error.DefaultDPoPAlgs}";
     private readonly ILogger<ChallengeHandler> _logger;

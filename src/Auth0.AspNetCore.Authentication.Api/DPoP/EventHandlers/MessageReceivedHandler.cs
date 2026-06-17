@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Auth0.AspNetCore.Authentication.Api.DPoP.EventHandlers;
 
-public class MessageReceivedHandler : DPoPEventHandlerBase, IDPoPEventHandler<MessageReceivedContext>
+internal class MessageReceivedHandler : DPoPEventHandlerBase, IDPoPEventHandler<MessageReceivedContext>
 {
     private readonly ILogger<MessageReceivedHandler> _logger;
 

@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace Auth0.AspNetCore.Authentication.Api.DPoP.EventHandlers;
 
-public interface IDPoPEventHandler<T>
+internal interface IDPoPEventHandler<T>
 {
     /// <summary>
     ///     Handles the event with the provided context.
