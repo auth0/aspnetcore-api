@@ -8,7 +8,7 @@ using Microsoft.Extensions.Primitives;
 
 namespace Auth0.AspNetCore.Authentication.Api.DPoP.EventHandlers;
 
-public class TokenValidationHandler : DPoPEventHandlerBase, IDPoPEventHandler<TokenValidatedContext>
+internal class TokenValidationHandler : DPoPEventHandlerBase, IDPoPEventHandler<TokenValidatedContext>
 {
     private readonly IDPoPProofValidationService _validationService;
     private readonly ILogger<TokenValidationHandler> _logger;

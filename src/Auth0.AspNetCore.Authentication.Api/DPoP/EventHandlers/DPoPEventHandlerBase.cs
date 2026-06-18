@@ -10,7 +10,7 @@ namespace Auth0.AspNetCore.Authentication.Api.DPoP.EventHandlers;
 ///     Base class for DPoP event handlers.
 ///     Provides core methods for extracting and validating DPoP-bound access tokens and headers.
 /// </summary>
-public abstract class DPoPEventHandlerBase
+internal abstract class DPoPEventHandlerBase
 {
     /// <summary>
     ///     Extracts the token portion from a DPoP Authorization header by removing the scheme prefix.

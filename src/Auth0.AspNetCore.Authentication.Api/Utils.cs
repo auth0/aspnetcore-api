@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Auth0.AspNetCore.Authentication.Api;
 
-public abstract class Utils
+internal abstract class Utils
 {
     /// <summary>
     ///     Creates a Base64-encoded JSON string containing the SDK agent name and version.

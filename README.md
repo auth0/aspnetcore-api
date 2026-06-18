@@ -251,6 +251,18 @@ builder.Services.AddAuth0ApiAuthentication(
 
 For detailed configuration options, caching strategies, security requirements, and more examples, see [EXAMPLES.md - Multiple Custom Domains](./EXAMPLES.md#multiple-custom-domains).
 
+### Security requirements
+
+When configuring the `DomainsResolver`, you are responsible for ensuring that all resolved domains are trusted. Mis-configuring the domain resolver is a critical security risk that can lead to authentication bypass on the relying party (RP) or expose the application to Server-Side Request Forgery (SSRF).
+
+**Single tenant limitation:**
+The `DomainsResolver` is intended solely for multiple custom domains belonging to the same Auth0 tenant. It is not a supported mechanism for connecting multiple Auth0 tenants to a single application.
+
+**Secure proxy requirement:**
+When using MCD, your application must be deployed behind a secure edge or reverse proxy (e.g., Cloudflare, Nginx, or AWS ALB). The proxy must be configured to sanitize and overwrite `Host` and `X-Forwarded-Host` headers before they reach your application.
+
+Without a trusted proxy layer to validate these headers, an attacker can manipulate the domain resolution process. This can result in malicious redirects, where users are sent to unauthorized or fraudulent endpoints during the authentication flows.
+
 ### Using Full JWT Bearer Options
 
 Since this library provides **complete access to JWT Bearer configuration**, you can use any standard JWT Bearer option via the `configureJwtBearer` parameter:
@@ -294,18 +306,6 @@ builder.Services.AddAuth0ApiAuthentication(
 > - SignalR integration
 > - Error handling and logging
 > - And much more!
-
-### Security requirements
-
-When configuring the `DomainsResolver`, you are responsible for ensuring that all resolved domains are trusted. Mis-configuring the domain resolver is a critical security risk that can lead to authentication bypass on the relying party (RP) or expose the application to Server-Side Request Forgery (SSRF).
-
-**Single tenant limitation:**
-The `DomainsResolver` is intended solely for multiple custom domains belonging to the same Auth0 tenant. It is not a supported mechanism for connecting multiple Auth0 tenants to a single application.
-
-**Secure proxy requirement:**
-When using MCD, your application must be deployed behind a secure edge or reverse proxy (e.g., Cloudflare, Nginx, or AWS ALB). The proxy must be configured to sanitize and overwrite `Host` and `X-Forwarded-Host` headers before they reach your application.
-
-Without a trusted proxy layer to validate these headers, an attacker can manipulate the domain resolution process. This can result in malicious redirects, where users are sent to unauthorized or fraudulent endpoints during the authentication flows.
 
 ## Examples
 
@@ -399,6 +399,10 @@ If you have questions or need help:
 - � See [EXAMPLES.md](./EXAMPLES.md) for code examples
 - 💬 Visit the [Auth0 Community](https://community.auth0.com/)
 - 🐛 Report issues on [GitHub Issues](https://github.com/auth0/aspnetcore-api/issues)
+
+### Vulnerability Reporting
+
+Please do not report security vulnerabilities on the public GitHub issue tracker. The [Responsible Disclosure Program](https://auth0.com/responsible-disclosure-policy) details the procedure for disclosing security issues.
 
 ## License
 Copyright 2025 Okta, Inc.
