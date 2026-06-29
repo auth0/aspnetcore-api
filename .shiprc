@@ -1,7 +1,8 @@
 {
     "files": {
         "build/common.props": [],
-        ".version": []
+        ".version": [],
+        "src/Auth0.AspNetCore.Authentication.Api/Version.cs": []
     },
     "prefixVersion": false
 }

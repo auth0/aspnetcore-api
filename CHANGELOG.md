@@ -1,5 +1,46 @@
 # Change Log
 
+## [1.0.0](https://github.com/auth0/aspnetcore-api/tree/1.0.0) (2026-06-29)
+
+First **general availability (GA)** release of `Auth0.AspNetCore.Authentication.Api` — a production-ready library for securing ASP.NET Core APIs with Auth0-issued tokens. It provides everything the standard `Microsoft.AspNetCore.Authentication.JwtBearer` package offers, with first-class Auth0 configuration, built-in DPoP, and Multiple Custom Domains support, in a single dependency.
+
+### Highlights
+
+- **Complete JWT Bearer functionality** — a drop-in replacement for `Microsoft.AspNetCore.Authentication.JwtBearer`. All standard options, events, validation, and authorization policies continue to work unchanged.
+- **Built-in DPoP (Demonstration of Proof-of-Possession)** — sender-constrained tokens per [RFC 9449](https://datatracker.ietf.org/doc/html/rfc9449), enabled with a single `.WithDPoP()` call. Three enforcement modes: `Allowed` (default), `Required`, and `Disabled`.
+- **Multiple Custom Domains (MCD)** — accept tokens from multiple Auth0 custom domains within a single SDK instance via `.WithCustomDomains()`, with static or dynamic (runtime) domain resolution, automatic OIDC/JWKS discovery, in-memory caching, and issuer validation before any network call.
+- **First-class Auth0 configuration** — set `Domain` and `Audience` directly, bind from an `IConfigurationSection` (`appsettings.json`, environment variables), or customize the underlying JWT Bearer pipeline via the `configureJwtBearer` callback.
+- **Fail-fast startup validation** — misconfigured `Domain`, missing audience, or unsupported `EventsType` usage are caught at startup with clear error messages.
+- **Broad framework support** — targets .NET 8.0 and above, with compile-time support for .NET 10.
+
+### Getting Started
+
+```bash
+dotnet add package Auth0.AspNetCore.Authentication.Api
+```
+
+```csharp
+// Binds Domain and Audience from the "Auth0" section of appsettings.json
+builder.Services.AddAuth0ApiAuthentication(
+    builder.Configuration.GetSection("Auth0"));
+```
+
+See the [README](./README.md), [EXAMPLES.md](./EXAMPLES.md), and [MIGRATION.md](./MIGRATION.md) for full documentation.
+
+### Changes since `1.0.0-beta.6`
+
+**Security**
+- chore(security): uses pinned versions of actions [\#70](https://github.com/auth0/aspnetcore-api/pull/70) ([jcchavezs](https://github.com/jcchavezs))
+
+### Notable changes during the beta cycle
+
+If you are upgrading from an earlier `1.0.0-beta.*` release, please review the breaking changes introduced in `1.0.0-beta.6` below — most notably:
+
+- `Auth0ApiOptions.JwtBearerOptions` was removed in favor of a first-class `Audience` property.
+- JWT Bearer customization moved to a separate `configureJwtBearer` callback, and direct `IConfigurationSection` binding was added.
+- `WithDPoP(...)` no longer accepts an authentication scheme argument.
+- Stricter startup validation now fails fast on invalid configuration.
+
 ## [1.0.0-beta.6](https://github.com/auth0/aspnetcore-api/tree/1.0.0-beta.6) (2026-05-21)
 
 > **⚠️ This release contains breaking changes.** Please read the notes below before upgrading.
