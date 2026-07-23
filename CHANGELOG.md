@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.0.1](https://github.com/auth0/aspnetcore-api/tree/1.0.1) (2026-07-23)
+[Full Changelog](https://github.com/auth0/aspnetcore-api/compare/1.0.0...1.0.1)
+
+**Security**
+  - Bumps `Microsoft.AspNetCore.Authentication.JwtBearer` from 8.0.27 to 8.0.29 [\#87](https://github.com/auth0/aspnetcore-api/pull/87) ([kailash-b](https://github.com/kailash-b))
+
 ## [1.0.0](https://github.com/auth0/aspnetcore-api/tree/1.0.0) (2026-06-29)
 
 First **general availability (GA)** release of `Auth0.AspNetCore.Authentication.Api` — a production-ready library for securing ASP.NET Core APIs with Auth0-issued tokens. It provides everything the standard `Microsoft.AspNetCore.Authentication.JwtBearer` package offers, with first-class Auth0 configuration, built-in DPoP, and Multiple Custom Domains support, in a single dependency.
