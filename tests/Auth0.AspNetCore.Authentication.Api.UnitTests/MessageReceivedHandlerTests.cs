@@ -7,7 +7,10 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
+
+using Moq;
 
 namespace Auth0.AspNetCore.Authentication.Api.UnitTests;
 
@@ -140,6 +143,28 @@ public class MessageReceivedHandlerTests
         await _handler.HandleAllowedMode(context);
 
         // Should handle invalid request
+        context.Result.Should().NotBeNull();
+        context.Result!.Failure.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task HandleRequiredMode_When_Authorization_Header_Is_Missing_Should_Log_Debug()
+    {
+        var logger = new Mock<ILogger<MessageReceivedHandler>>();
+        var handler = new MessageReceivedHandler(logger.Object);
+        MessageReceivedContext context = CreateContext(DPoPModes.Required);
+
+        await handler.HandleRequiredMode(context);
+
+        logger.Verify(
+            x => x.Log(
+                LogLevel.Debug,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString() == "Missing authorization header in required mode"),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+
         context.Result.Should().NotBeNull();
         context.Result!.Failure.Should().NotBeNull();
     }
