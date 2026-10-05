@@ -139,7 +139,15 @@ internal class MessageReceivedHandler : DPoPEventHandlerBase, IDPoPEventHandler<
     {
         if (!IsValidAuthorizationHeaderCount(context.Request))
         {
-            _logger.LogError("Invalid authorization header count in required mode");
+            if (context.Request.Headers.Authorization.Count == 0)
+            {
+                _logger.LogDebug("Missing authorization header in required mode");
+            }
+            else
+            {
+                _logger.LogError("Invalid authorization header count in required mode");
+            }
+
             HandleInvalidRequestInRequiredMode(context);
             return Task.CompletedTask;
         }
