@@ -1,5 +1,25 @@
 # Change Log
 
+## [1.0.2](https://github.com/auth0/aspnetcore-api/tree/1.0.2) (2026-11-10)
+[Full Changelog](https://github.com/auth0/aspnetcore-api/compare/1.0.1...1.0.2)
+
+**Fixed**
+- fix: lower log level for missing authorization header [\#105](https://github.com/auth0/aspnetcore-api/pull/105) ([septydev](https://github.com/septydev))
+
+**Security**
+- chore: Bump Microsoft.NET.Test.Sdk from 18.9.0 to 18.11.0 [\#118](https://github.com/auth0/aspnetcore-api/pull/118) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore: Bump Microsoft.SourceLink.GitHub from 10.0.402 to 10.0.403 [\#121](https://github.com/auth0/aspnetcore-api/pull/121) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore: Bump Microsoft.AspNetCore.Authentication.JwtBearer from 8.0.32 to 8.0.33 [\#120](https://github.com/auth0/aspnetcore-api/pull/120) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore: Bump Microsoft.SourceLink.GitHub from 10.0.401 to 10.0.402 [\#117](https://github.com/auth0/aspnetcore-api/pull/117) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore: Bump Microsoft.AspNetCore.Authentication.JwtBearer from 8.0.31 to 8.0.32 [\#115](https://github.com/auth0/aspnetcore-api/pull/115) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore: Bump xunit.runner.visualstudio from 3.1.5 to 4.0.1 [\#114](https://github.com/auth0/aspnetcore-api/pull/114) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore: Bump coverlet.collector from 10.0.1 to 10.1.0 [\#110](https://github.com/auth0/aspnetcore-api/pull/110) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore: Bump Moq from 4.20.72 to 4.21.0 [\#111](https://github.com/auth0/aspnetcore-api/pull/111) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore: Bump Microsoft.SourceLink.GitHub from 10.0.301 to 10.0.401 [\#103](https://github.com/auth0/aspnetcore-api/pull/103) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore: Bump Microsoft.AspNetCore.Authentication.JwtBearer from 8.0.30 to 8.0.31 [\#100](https://github.com/auth0/aspnetcore-api/pull/100) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore: Bump Microsoft.NET.Test.Sdk from 18.8.1 to 18.9.0 [\#95](https://github.com/auth0/aspnetcore-api/pull/95) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore: Bump Microsoft.AspNetCore.Authentication.JwtBearer from 8.0.29 to 8.0.30 [\#93](https://github.com/auth0/aspnetcore-api/pull/93) ([dependabot[bot]](https://github.com/apps/dependabot))
+
 ## [1.0.1](https://github.com/auth0/aspnetcore-api/tree/1.0.1) (2026-07-23)
 [Full Changelog](https://github.com/auth0/aspnetcore-api/compare/1.0.0...1.0.1)
 
