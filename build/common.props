@@ -20,8 +20,8 @@
   </PropertyGroup>
     <PropertyGroup>
     <LangVersion>latest</LangVersion>
-    <Version>1.0.1</Version>
-    <AssemblyVersionNumber>1.0.1</AssemblyVersionNumber>
+    <Version>1.0.2</Version>
+    <AssemblyVersionNumber>1.0.2</AssemblyVersionNumber>
   </PropertyGroup>
   <PropertyGroup>
     <AssemblyVersion>$(AssemblyVersionNumber)</AssemblyVersion>
